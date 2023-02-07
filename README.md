@@ -8,9 +8,9 @@ kafkakewl also exposes metrics about these topics and applications like lag, con
 
 ## History
 
-There is already a working version which we'd like to redesign and rewrite to work better in a number of use-cases, e.g. integrating with gitops workflows, deploying different topologies in different kafka-clusters.
+There is already an [existing, working version](https://github.com/MarshallWace/kafkakewl/tree/legacy) which we'd like to redesign and rewrite to work better in a number of use-cases, e.g. integrating with gitops workflows, deploying different topologies in different kafka-clusters.
 
-This existing version is in maintenance mode, not actively worked on. Feel free to check it out here, but we won't support it in the future.
+This existing version is in maintenance mode, not actively worked on. Feel free to check it out, but we won't support it in the future.
 
 We plan to simplify the new version and abandon the 2 step deployment model (submit the topology file, then deploy it to various kafka-clusters). Instead, each kafka-cluster is managed by a separate instance of kafkakewl and topologies are just deployed with these, completely independently to each kafka cluster.
 
