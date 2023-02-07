@@ -1,0 +1,40 @@
+<configuration>
+    <variable name="LOGBACK_LOCAL_FILE_APPENDER" value="${LOGBACK_LOCAL_FILE_APPENDER:-local-file}" />
+    <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout}" />
+    <variable name="LOGBACK_STDERR_APPENDER" value="${LOGBACK_STDERR_APPENDER:-stderr}" />
+    <variable name="LOGBACK_LOCALFILE_ROOT" value="${LOGBACK_LOCALFILE_ROOT:-./logs}" />
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%date{ISO8601} [%-5level] %logger{0} {%class %method}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="stderr" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <encoder>
+            <pattern>%date{ISO8601} [%-5level] %logger{0} {%class %method}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="local-file" class="ch.qos.logback.core.FileAppender">
+        <file>${LOGBACK_LOCALFILE_ROOT}/com.mwam.kafkakewl.stateadaptor/com.mwam.kafkakewl.stateadaptor.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%date{ISO8601} [%-5level] %logger{0} {%class %method}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="nop" class="ch.qos.logback.core.helpers.NOPAppender">
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="${LOGBACK_STDOUT_APPENDER}"/>
+        <appender-ref ref="${LOGBACK_STDERR_APPENDER}"/>
+        <appender-ref ref="${LOGBACK_LOCAL_FILE_APPENDER}" />
+    </root>
+</configuration>

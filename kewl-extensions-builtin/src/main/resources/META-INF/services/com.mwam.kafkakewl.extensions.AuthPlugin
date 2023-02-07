@@ -1,0 +1,3 @@
+com.mwam.kafkakewl.extensions.builtin.KerberosAuthPlugin
+com.mwam.kafkakewl.extensions.builtin.SameUserAuthPlugin
+com.mwam.kafkakewl.extensions.builtin.HttpHeaderAuthPlugin

@@ -1,0 +1,65 @@
+{
+    "namespace": "kewltest",
+    "description": "kewltest test topology - couple of kafka streams, connector, connect-replicator and normal topics",
+	"environments": {
+		"default": {
+            "partitions": "100",
+            "retention.ms": "180000000000",
+            "lag": "3600"
+        },
+        "test": {
+            "partitions": "1"
+		},
+		"prod": {
+			"retention.ms": "100000000000"
+		},
+		"staging": {
+            "developers-access": "Full"
+		}
+	},
+    "developers": ["user-joe"],
+    "topics": {
+        "dbtable":         {"name": "kewltest.database.table"},
+        "dbtable-compact": {"name": "kewltest.database.table.compact"},
+        "topic1":          {"name": "kewltest.topic1", "partitions": "${partitions}", "config": {"retention.ms": "${retention.ms}"}},
+        "topic2":          {"name": "kewltest.topic2"},
+        "topic3":          {"name": "kewltest.topic3", "unManaged": true},
+        "error":           {"name": "kewltest.error"}
+    },
+    "applications": {
+        "DbConnector":          { "user": "user-kewltest-${env}", "type": {"connector":          "mssql-somedatabase"}},
+        "DbConnectReplicator":  { "user": "user-kewltest-${env}", "type": {"connectReplicator":  "replicator-db-compact"}},
+        "Source":               { "user": "user-kewltest-${env}" },
+        "Sink":                 { "user": "user-kewltest-${env}", "type": {"consumerGroup":      "kewltest.sink"}, "consumerLagWindowSeconds": "${lag}" },
+        "Processor":            { "user": "user-kewltest-${env}", "type": {"kafkaStreamsAppId":  "kewltest.__kstreams__.Processor"} },
+        "SomeOtherApp":         { "user": "user-kewltest-${env}", "type": {"consumerGroup":      "kewltest.someotherapp" } },
+        "FlinkPipeline":        { "user": "user-kewltest-${env}", "type": {"consumerGroup":      "kewltest.flink-pipeline", "transactionalId": "kewltest.flink-pipeline" } }
+    },
+    "aliases": {
+        "topics": {
+            "topics-all":  [{"namespace": "kewltest"}],
+            "topics-db":   ["dbtable", "dbtable-compact"]
+        },
+        "applications": {
+            "AllApps":     [{"namespace": "kewltest" }],
+            "SomeApps":    [{"regex": "x\\d.*" }]
+        }
+    },
+    "relationships": {
+        "DbConnector":          { "produce": ["dbtable"] },
+        "DbConnectReplicator":  { "consume": ["dbtable"], "produce": ["dbtable-compact"] },
+        "Source":               { "produce": ["kewltest.topic1"] },
+        "Sink":                 { "consume": ["kewltest.topic1"] },
+        "SomeOtherApp":         { "consume": ["topics-db"] },
+        "Processor": { 
+            "consume": [
+                "dbtable", 
+                "kewltest.topic1",
+                { "kewltest.topic2": { "reset": "End" } },
+                "kewltest.topic3"
+            ],
+            "produce": ["kewltest.topic2"]
+        },
+        "AllApps": { "produce": ["kewltest.error"] }
+    }
+}

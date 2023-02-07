@@ -1,0 +1,19 @@
+startDelaySeconds: 0
+ssl: false
+rules:
+  - pattern: 'kafkakewl-api<name=com\.mwam\.kafkakewl\.api\.errors\.errorcount\, type=counters><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-errors"
+    value: "$2"
+    labels:
+      type: "$1"
+  - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.api\.route\.(.+)\:(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-route"
+    value: "$6"
+    labels:
+      verb: "$1"
+      endpoint: "$2"
+      metric: "$3"
+      result: "$4"
+      type: "$5"

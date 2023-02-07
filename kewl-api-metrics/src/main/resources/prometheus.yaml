@@ -1,0 +1,49 @@
+startDelaySeconds: 0
+ssl: false
+rules:
+  - pattern: 'kafkakewl-api-metrics<name=\"com\.mwam\.kafkakewl\.api\.metrics\.topic\.(.+)\:(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: GAUGE
+    name: "kafkakewl-api-metrics-topic"
+    value: "$6"
+    labels:
+      kafkaCluster: "$1"
+      metric: "$2"
+      topic: "$3"
+      partition: "$4"
+      type: "$5"
+  - pattern: 'kafkakewl-api-metrics<name=\"com\.mwam\.kafkakewl\.api\.metrics\.consumer\.(.+)\:(.+)\:(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: GAUGE
+    name: "kafkakewl-api-metrics-consumer"
+    value: "$7"
+    labels:
+      kafkaCluster: "$1"
+      metric: "$2"
+      group: "$3"
+      topic: "$4"
+      partition: "$5"
+      type: "$6"
+  - pattern: 'kafkakewl-api-metrics<name=\"com\.mwam\.kafkakewl\.api\.metrics\.source\.(.+)\.(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-metrics-source"
+    value: "$5"
+    labels:
+      source: "$1"
+      kafkaCluster: "$2"
+      metric: "$3"
+      type: "$4"
+  - pattern: 'kafkakewl-api-metrics<name=\"com\.mwam\.kafkakewl\.api\.metrics\.route\.(.+)\:(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-metrics-route"
+    value: "$6"
+    labels:
+      endpoint: "$1"
+      kafkaCluster: "$2"
+      metric: "$3"
+      result: "$4"
+      type: "$5"
+  - pattern: 'kafkakewl-api-metrics<name=com\.mwam\.kafkakewl\.api\.errors\.errorcount\, type=counters><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-metrics-errors"
+    value: "$2"
+    labels:
+      type: "$1"
