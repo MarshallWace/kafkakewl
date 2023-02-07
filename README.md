@@ -7,7 +7,7 @@ It consists of the following components:
 
 - **kafkakewl-api-metrics**: another service with a REST API that gathers metrics about consumers/producers/topics and exposes them. The **kafkakewl-api** uses this service, it's typically not exposed for other public use.
 
-- **kafkakewl-ui**: a standard single page web-application that talks to the **kafkakewl-api** service, and shows the topologies, their topics and applications and some metrics.
+- [**kafkakewl-ui**](https://github.com/MarshallWace/kafkakewl-ui/tree/legacy-main): a standard single page web-application that talks to the **kafkakewl-api** service, and shows the topologies, their topics and applications and some metrics.
 
 # License
 
