@@ -25,6 +25,7 @@ val metricsVersion = "4.0.5"
 val kafkaVersion = "2.0.0" // Any version higher than 2.0.0 changes the KafkaConsumer.beginningOffsets()'s behaviour and makes it time-out if only a single topic-partition has no leader or some metadata-problem.
                            // This is really bad, because it can happen sometimes and then we won't have any lag monitoring (and low/high offset metrics) for the whole cluster.
                            // Unfortunately this old version fails on e.g. consuming zstd compressed message batches, which makes the consume-after-consumer-group feature (to detect fake-lags) less useful.
+val curatorVersion = "5.5.0"
 
 val dnsDeps = Seq(
   "dnsjava" % "dnsjava" % "2.1.8"
@@ -85,6 +86,10 @@ val sqlDeps = Seq(
 
 val kafkaDeps = Seq(
   "org.apache.kafka" %% "kafka" % kafkaVersion
+)
+
+val curatorDeps = Seq(
+  "org.apache.curator" % "curator-framework" % curatorVersion
 )
 
 val testDeps = Seq(
@@ -187,7 +192,7 @@ lazy val `kewl-kafkacluster-processor` = (project in file("kewl-kafkacluster-pro
     name := "kewl-kafkacluster-processor",
     headerLicense := license,
     libraryDependencies ++= configDeps ++ catsDeps ++ loggingDeps ++ akkaDeps ++ akkaHttpDeps
-      ++ jsonDeps ++ kafkaDeps ++ testDeps ++ metricsDeps
+      ++ jsonDeps ++ kafkaDeps ++ curatorDeps ++ testDeps ++ metricsDeps
   )
 
 lazy val `kewl-api` = (project in file("kewl-api"))

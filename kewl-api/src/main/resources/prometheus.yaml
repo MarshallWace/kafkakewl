@@ -17,3 +17,18 @@ rules:
       metric: "$3"
       result: "$4"
       type: "$5"
+  - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.processor\.kafkacluster\.zk_get_deleted_topics_failed\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl_zk_get_deleted_topics_failed"
+    value: "$3"
+    labels:
+      kafkaCluster: "$1"
+      type: "$2"
+  - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.processor\.kafkacluster\.not_created_pending_deleted_topic\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl_not_created_pending_deleted_topic"
+    value: "$4"
+    labels:
+      kafkaCluster: "$1"
+      topic: "$2"
+      type: "$3"

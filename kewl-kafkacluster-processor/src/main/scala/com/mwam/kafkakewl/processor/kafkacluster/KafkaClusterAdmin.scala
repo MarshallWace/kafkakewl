@@ -6,6 +6,7 @@
 
 package com.mwam.kafkakewl.processor.kafkacluster
 
+import cats.instances.vector._
 import cats.syntax.either._
 import com.mwam.kafkakewl.utils._
 import com.mwam.kafkakewl.kafka.utils._
@@ -19,8 +20,12 @@ import com.mwam.kafkakewl.domain._
 import com.mwam.kafkakewl.domain.deploy.OffsetOfTopicPartition
 import com.mwam.kafkakewl.domain.kafka.config.TopicConfigKeys
 import com.mwam.kafkakewl.domain.kafka.{KafkaConsumerGroup, KafkaTopic}
-import com.mwam.kafkakewl.domain.kafkacluster.KafkaClusterEntityId
+import com.mwam.kafkakewl.domain.kafkacluster.{KafkaCluster, KafkaClusterEntityId}
 import com.mwam.kafkakewl.processor.kafkacluster.common._
+import com.typesafe.scalalogging.LazyLogging
+import nl.grons.metrics4.scala.{DefaultInstrumented, MetricName}
+import org.apache.curator.framework.CuratorFrameworkFactory
+import org.apache.curator.retry.RetryForever
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -93,6 +98,8 @@ class KafkaTopicReplicationFactorDifferent(topic: String, before: Short, after: 
   extends RuntimeException(s"topic $topic's replication factor cannot be updated from $before to $after.") {}
 class KafkaTopicConfigUpdateInvalid(topic: String, before: Map[String, String], after: Map[String, String])
   extends RuntimeException(s"topic $topic's config cannot be updated from $before to $after. Deleting config keys is not supported at the moment.") {}
+class KafkaTopicPendingDeleted(topic: String)
+  extends RuntimeException(s"topic $topic is being deleted (among '/admin/delete_topics' in ZK), cannot create it yet.") {}
 
 /**
   * Default implementation of the KafkaClusterAdmin trait
@@ -102,17 +109,26 @@ class KafkaTopicConfigUpdateInvalid(topic: String, before: Map[String, String], 
 private[kafkacluster] class DefaultKafkaClusterAdmin(
   val kafkaClusterId: KafkaClusterEntityId,
   val connection: KafkaConnection,
-  val kafkaRequestTimeOutMillis: Option[Int]
+  val kafkaCluster: KafkaCluster
 ) extends KafkaClusterAdmin
     with KafkaAdminClientOperations
     with KafkaAdminClientAndConsumerOperations[Array[Byte], Array[Byte]]
     with KafkaConnectionOperations
     with KafkaConsumerOperations[Array[Byte], Array[Byte]]
     with KafkaConsumerExtraSyntax
-    with KafkaAdminClientExtraSyntax {
+    with KafkaAdminClientExtraSyntax
+    with DefaultInstrumented
+    with LazyLogging {
 
-  val adminClient = AdminClient.create(KafkaConfigProperties.forAdmin(KafkaAdminConfig(connection, kafkaRequestTimeOutMillis)))
-  val consumer = createConsumer(groupId = None, kafkaRequestTimeOutMillis)
+  override lazy val metricBaseName: MetricName = MetricName("com.mwam.kafkakewl.processor.kafkacluster")
+
+  val adminClient = AdminClient.create(KafkaConfigProperties.forAdmin(KafkaAdminConfig(connection, kafkaCluster.kafkaRequestTimeOutMillis)))
+  val consumer = createConsumer(groupId = None, kafkaCluster.kafkaRequestTimeOutMillis)
+  val zkClientOption = kafkaCluster.zooKeeper.map { zooKeepers =>
+    val zkClient = CuratorFrameworkFactory.newClient(zooKeepers, new RetryForever(kafkaCluster.kafkaRequestTimeOutMillis.getOrElse(3000)))
+    zkClient.start()
+    zkClient
+  }
 
   /**
     * Creates KafkaClusterItems for topics and ACLs in the kafka-cluster
@@ -153,8 +169,37 @@ private[kafkacluster] class DefaultKafkaClusterAdmin(
     change match {
       case KafkaClusterChange.Add(topic: KafkaClusterItem.Topic) =>
         assert(topic.isReal, "cannot deploy (add) un-real topic")
-        ifNotDryRun {
-          adminClient.createTopic(topic.name, topic.partitions, topic.replicationFactor, topic.config)
+        for { // based on Try
+          deleteTopicsCheckResult <- Try {
+            // If there is no zookeeper configured for this cluster, we just pretend that there is nothing in '/admin/delete_topics'
+            Try(zkClientOption.map(_.getChildren.forPath("/admin/delete_topics").asScala.toList).getOrElse(Nil)) match {
+              case Failure(t) =>
+                val errorMessage = s"could not check the '/admin/delete_topics' node in ZK before creating the topic '${topic.name}': ${t.getMessage}"
+                // I want to log this as an error with a specific message here (it'll be logged later as part of the deployment result too, but it's easier to find it if we log as a separate error)
+                logger.error(errorMessage)
+                metrics.counter(s"zk_get_deleted_topics_failed:$kafkaClusterId").inc()
+                // We go ahead with the topic creation, it's probably better than not even trying. I'm not sure how often and when exactly
+                // we can get into this code branch, we'll see if this needs to change.
+                KafkaOperationResult.tell(errorMessage)
+              case Success(deleteTopics) =>
+                if (deleteTopics.contains(topic.name)) {
+                  val exception = new KafkaTopicPendingDeleted(topic.name)
+                  // I want to log this as an error with a specific message here (it'll be logged later as part of the deployment result too, but it's easier to find it if we log as a separate error)
+                  logger.error(exception.getMessage)
+                  metrics.counter(s"not_created_pending_deleted_topic:$kafkaClusterId:${topic.name}").inc()
+                  // the outer Try ensures that we fail-fast before attempting to create the topic
+                  throw exception
+                } else {
+                  KafkaOperationResult.empty
+                }
+            }
+          }
+          createTopicResult <- ifNotDryRun {
+            adminClient.createTopic(topic.name, topic.partitions, topic.replicationFactor, topic.config)
+          }
+        } yield {
+          // combining the 2 KafkaOperationResults' logs (they have no values)
+          deleteTopicsCheckResult.flatMap(_ => createTopicResult)
         }
 
       case KafkaClusterChange.Add(acl: KafkaClusterItem.Acl) =>
@@ -294,6 +339,7 @@ private[kafkacluster] class DefaultKafkaClusterAdmin(
   def close(): Unit = {
     adminClient.close()
     consumer.close()
+    zkClientOption.foreach(_.close())
   }
 }
 
