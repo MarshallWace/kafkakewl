@@ -199,7 +199,10 @@ private[kafkacluster] class DefaultKafkaClusterAdmin(
           }
         } yield {
           // combining the 2 KafkaOperationResults' logs (they have no values)
-          deleteTopicsCheckResult.flatMap(_ => createTopicResult)
+          for { // based on KafkaOperationResult = Writer[Vector[String], _]
+            _ <- deleteTopicsCheckResult
+            _ <- createTopicResult
+          } yield ()
         }
 
       case KafkaClusterChange.Add(acl: KafkaClusterItem.Acl) =>
