@@ -66,13 +66,20 @@ class KafkaClusterEncoderDecodersSpec extends FlatSpec {
 
   "a KafkaCluster with no environments" should "be encoded/decoded correctly" in {
     val kafkaCluster = KafkaCluster(KafkaClusterEntityId("test"), "broker1,broker2,broker3")
-    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":null,"zooKeeperRetryIntervalMs":null,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
     assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
     assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
 
     // other ways to decode into the same
     assert(kafkaCluster == decode[KafkaCluster]("""{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","environments":{}}""").right.get)
     assert(kafkaCluster == decode[KafkaCluster]("""{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","environments":[]}""").right.get)
+  }
+
+  "a KafkaCluster with zooKeeper" should "be encoded/decoded correctly" in {
+    val kafkaCluster = KafkaCluster(KafkaClusterEntityId("test"), "broker1,broker2,broker3", "zookeeper1,zookeeper2,zookeeper3".some, 3000.some)
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":"zookeeper1,zookeeper2,zookeeper3","zooKeeperRetryIntervalMs":3000,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
+    assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
   }
 
   "a KafkaCluster with some environments but not variables" should "be encoded/decoded correctly" in {
@@ -85,7 +92,7 @@ class KafkaClusterEncoderDecodersSpec extends FlatSpec {
         DeploymentEnvironmentId("test-cluster") -> DeploymentEnvironment.Variables.empty
       )
     )
-    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{"default":{},"test":{},"test-cluster":{}},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":null,"zooKeeperRetryIntervalMs":null,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{"default":{},"test":{},"test-cluster":{}},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
     assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
     assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
 
@@ -104,7 +111,7 @@ class KafkaClusterEncoderDecodersSpec extends FlatSpec {
         DeploymentEnvironmentId("test-cluster") -> DeploymentEnvironment.Variables("key" -> DeploymentEnvironment.Variable.Value(Seq("val-test-cluster")))
       )
     )
-    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{"default":{"key":"val-default"},"test":{"key":"val-test"},"test-cluster":{"key":"val-test-cluster"}},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":null,"zooKeeperRetryIntervalMs":null,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{"default":{"key":"val-default"},"test":{"key":"val-test"},"test-cluster":{"key":"val-test-cluster"}},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{},"defaultReplicaPlacementId":null,"topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
     assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
     assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
 
@@ -114,7 +121,7 @@ class KafkaClusterEncoderDecodersSpec extends FlatSpec {
 
   "a KafkaCluster with replicaPlacements" should "be encoded/decoded correctly" in {
     val kafkaCluster = KafkaCluster(KafkaClusterEntityId("test"), "broker1,broker2,broker3", replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> Map(defaultTopicConfig)), defaultReplicaPlacementId = ReplicaPlacementId("default").some)
-    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{"default":{"confluent.placement.constraints":{"overridable":false,"default":"{\"durable\":true}"}}},"defaultReplicaPlacementId":"default","topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":null,"zooKeeperRetryIntervalMs":null,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{"default":{"confluent.placement.constraints":{"overridable":false,"default":"{\"durable\":true}"}}},"defaultReplicaPlacementId":"default","topicConfigKeysAllowedInTopologies":{"include":[],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
     assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
     assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
 
@@ -130,7 +137,7 @@ class KafkaClusterEncoderDecodersSpec extends FlatSpec {
       replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> Map(defaultTopicConfig)), defaultReplicaPlacementId = ReplicaPlacementId("default").some,
       topicConfigKeysAllowedInTopologies = TopicConfigKeyConstraintInclusive(Seq(TopicConfigKeyConstraint.Exact("a"), TopicConfigKeyConstraint.Regex("b"), TopicConfigKeyConstraint.Prefix("c")))
     )
-    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{"default":{"confluent.placement.constraints":{"overridable":false,"default":"{\"durable\":true}"}}},"defaultReplicaPlacementId":"default","topicConfigKeysAllowedInTopologies":{"include":["a",{"regex":"b"},{"prefix":"c"}],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
+    val kafkaClusterAsJson = """{"kafkaCluster":"test","brokers":"broker1,broker2,broker3","zooKeeper":null,"zooKeeperRetryIntervalMs":null,"securityProtocol":null,"kafkaClientConfig":{},"name":"","environments":{},"nonKewl":{"topicRegexes":[],"topicForAclsRegexes":[],"groupForAclsRegexes":[],"transactionalIdForAclsRegexes":[],"kafkaAcls":[]},"requiresAuthorizationCode":false,"replicaPlacementConfigs":{"default":{"confluent.placement.constraints":{"overridable":false,"default":"{\"durable\":true}"}}},"defaultReplicaPlacementId":"default","topicConfigKeysAllowedInTopologies":{"include":["a",{"regex":"b"},{"prefix":"c"}],"exclude":[]},"additionalManagedTopicConfigKeys":{"include":[],"exclude":[]},"systemTopicsReplicaPlacementId":null,"kafkaRequestTimeOutMillis":null}"""
     assert(kafkaCluster.asJson.noSpaces == kafkaClusterAsJson)
     assert(kafkaCluster == decode[KafkaCluster](kafkaClusterAsJson).right.get)
 
