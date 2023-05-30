@@ -92,7 +92,7 @@ class KafkaClusterCommandProcessorActor(
       logger.info("skipping validating the deployment state store")
     }
 
-    kafkaClusterAdmin = new DefaultKafkaClusterAdmin(config.kafkaClusterId, config.connection, config.kafkaCluster.kafkaRequestTimeOutMillis)
+    kafkaClusterAdmin = new DefaultKafkaClusterAdmin(config.kafkaClusterId, config.connection, config.kafkaCluster)
     kafkaClusterCommandProcessor = new KafkaClusterCommandProcessing(config.kafkaClusterId, config.connection, kafkaClusterAdmin, config.topicDefaults)
 
     context.parent ! KafkaClusterCommandProcessorActor.DeployedTopologies(config.kafkaClusterId, inMemoryStateStores.deployedTopology.getLatestLiveStates)

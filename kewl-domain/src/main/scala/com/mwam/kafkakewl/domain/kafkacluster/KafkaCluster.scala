@@ -17,6 +17,8 @@ final case class KafkaClusterEntityId(id: String) extends AnyVal with EntityId
   *
   * @param kafkaCluster the kafka-cluster id (only so that the json can specify it)
   * @param brokers the list of brokers
+  * @param zooKeeper the optional list of the zookeeper hosts (to avoid creating topics if they are pending-deleted in the '/admin/delete_topics')
+  * @param zooKeeperRetryIntervalMs the zookeeper connection retry interval milliseconds, defaulting to 3000
   * @param securityProtocol the optional security protocol (if none, the default is used which is PLAINTEXT)
   * @param kafkaClientConfig the optional kafka client config that overrides everything else
   * @param name the optional human readable name of the kafka cluster
@@ -35,6 +37,8 @@ final case class KafkaClusterEntityId(id: String) extends AnyVal with EntityId
 final case class KafkaCluster(
   kafkaCluster: KafkaClusterEntityId, // the only reason of this being here is that the input json can tell the kafka-cluster id
   brokers: String,
+  zooKeeper: Option[String] = None,
+  zooKeeperRetryIntervalMs: Option[Int] = None,
   securityProtocol: Option[String] = None,
   kafkaClientConfig: Map[String, String] = Map.empty,
   name: String = "",
