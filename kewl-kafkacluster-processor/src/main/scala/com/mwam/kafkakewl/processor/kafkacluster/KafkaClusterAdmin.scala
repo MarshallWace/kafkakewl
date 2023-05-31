@@ -127,6 +127,14 @@ private[kafkacluster] class DefaultKafkaClusterAdmin(
   val zkClientOption = kafkaCluster.zooKeeper.map { zooKeepers =>
     val zkClient = CuratorFrameworkFactory.newClient(zooKeepers, new RetryForever(kafkaCluster.kafkaRequestTimeOutMillis.getOrElse(3000)))
     zkClient.start()
+    // Querying and log '/admin' from zookeeper, just to see whether we can access it fine or not
+    Try(zkClient.getChildren.forPath("/admin").asScala.toList) match {
+      case Failure(t) =>
+        logger.error(s"could not query the '/admin' node in ZK: ${t.getMessage}")
+        metrics.counter(s"zk_get_admin_failed:$kafkaClusterId").inc()
+      case Success(children) =>
+        logger.info(s"successfully queried the '/admin' node in ZK: '${children.mkString(", ")}'")
+    }
     zkClient
   }
 
