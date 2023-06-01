@@ -49,6 +49,10 @@ class LogFilter extends TurboFilter {
         // this kerb4j error can be info, it usually doesn't mean any error
         logger.info(marker, format, params)
         FilterReply.DENY
+      case (Level.ERROR, "org.apache.curator.ConnectionState") if format.contains("Authentication failed") =>
+        // this curator error can be warning, because we can still talk to ZK un-authenticated
+        logger.warn(marker, format, params)
+        FilterReply.DENY
       case (Level.INFO, "akka.actor.ActorSystemImpl") if format == "{}" && params.length == 1 && isDebugLog(params(0)) =>
         logger.debug(marker, format, params)
         FilterReply.DENY
