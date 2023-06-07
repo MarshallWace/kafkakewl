@@ -56,7 +56,7 @@ class KafkaTopicMetricsPoller(
 
         case Left(e) =>
           metrics.meter(s"${kafkaClusterId}:getalltopicinfosfailed").mark()
-          ApplicationMetrics.errorCounter.inc()
+          // Not incrementing the ApplicationMetrics.errorCounter, because we mark the meter metric above and we can alert on that
           logger.error(s"error while polling topic infos: ${e.mkString(", ")}")
       }
 

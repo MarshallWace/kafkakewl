@@ -63,7 +63,8 @@ class KafkaClusterConsumerGroupOffsetsPoller(
       val consumerGroupsWithExclusions = consumerGroups.filter(cg => !excludeConsumerGroups.exists(_.doesMatch(cg)))
       val ((errors, consumerGroupsOffsets), durationConsumerGroupsOffsets) = durationOf { helper.adminClient.consumerGroupOffsets(consumerGroupsWithExclusions) }
       errors.foreach { case (cg, WithUtcTimestamp(_, t)) =>
-        ApplicationMetrics.errorCounter.inc()
+        metrics.meter(s"${helper.kafkaClusterId}:getconsumergroupoffsetsfailed").mark()
+        // Not incrementing the ApplicationMetrics.errorCounter, because we mark the meter metric above and we can alert on that
         logger.error(s"getConsumerGroupsOffsets(): $cg - ${t.getMessage}")
       }
       GetConsumerGroupOffsetsResult(durationListConsumerGroup, durationConsumerGroupsOffsets, errors, consumerGroupsOffsets)
@@ -194,7 +195,8 @@ class KafkaClusterConsumerGroupOffsetsPoller(
       val offsetsResult = getConsumerGroupsOffsets
       // if it completely failed (even getting the list of consumer groups) there is not much we can do, log and try again later
       offsetsResult.swap.foreach { error =>
-        ApplicationMetrics.errorCounter.inc()
+        metrics.meter(s"${helper.kafkaClusterId}:getconsumergrouplistfailed").mark()
+        // Not incrementing the ApplicationMetrics.errorCounter, because we mark the meter metric above and we can alert on that
         logger.error(s"getConsumerGroupsOffsets(): failed - $error")
       }
       offsetsResult.foreach { r =>
