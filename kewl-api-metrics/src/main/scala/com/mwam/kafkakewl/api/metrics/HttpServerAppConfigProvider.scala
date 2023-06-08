@@ -42,7 +42,7 @@ trait HttpServerAppConfigProvider extends ExecutorContextFactory with HttpConfig
         info <- c.kafkaConnectionInfo("")
       } yield {
         val kafkaClusterId = KafkaClusterEntityId(id)
-        (kafkaClusterId, KafkaCluster(kafkaClusterId, info.brokers, info.securityProtocol))
+        (kafkaClusterId, KafkaCluster(kafkaClusterId, info.brokers, None, None, info.securityProtocol))
       }
     )
     .toMap
