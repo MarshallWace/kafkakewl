@@ -208,7 +208,7 @@ class KafkaClusterConsumerGroupOffsetsConsumer(
     for {
       // consuming the consumer-offsets topic until the end, compacting, getting the latest values for keys
       latestConsumerOffsets <- KafkaUpsertConsumer.loadLatestKeyValuesOfTopic[ConsumerGroupTopicPartition, ConsumerGroupOffset](
-        helper.connection.withConfig(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, "20971520"), // to speed up the initial load
+        helper.connection,
         consumerOffsetsTopicName,
         noOfThreadsForInitialLoad,
         logger.some,
