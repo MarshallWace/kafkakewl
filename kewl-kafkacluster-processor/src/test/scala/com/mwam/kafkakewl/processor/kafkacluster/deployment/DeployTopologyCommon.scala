@@ -8,7 +8,7 @@ package com.mwam.kafkakewl.processor.kafkacluster.deployment
 
 import com.mwam.kafkakewl.domain._
 import com.mwam.kafkakewl.domain.deploy.{DeployedTopology, TopologyToDeployWithVersion}
-import com.mwam.kafkakewl.domain.kafkacluster.{IsTopicConfigManaged, KafkaClusterEntityId, ResolveTopicConfig, allTopicConfigsAreManaged, nullResolveReplicaPlacement}
+import com.mwam.kafkakewl.domain.kafkacluster.{IsTopicConfigManaged, IsTopicConfigValueEquivalent, KafkaClusterEntityId, ResolveTopicConfig, allTopicConfigsAreManaged, nullResolveReplicaPlacement, sameTopicConfigAreEquivalent}
 import com.mwam.kafkakewl.domain.topology.TopologyLike.TopicDefaults
 import com.mwam.kafkakewl.domain.topology.{TopologyEntityId, TopologyToDeploy}
 import org.scalatest.Matchers
@@ -66,11 +66,13 @@ trait DeployTopologyCommon {
     topologyToDeployOrNone: Option[TopologyToDeploy],
     resolveTopicConfig: ResolveTopicConfig = nullResolveReplicaPlacement,
     isTopicConfigManaged: IsTopicConfigManaged = allTopicConfigsAreManaged,
+    isTopicConfigValueEquivalent: IsTopicConfigValueEquivalent = sameTopicConfigAreEquivalent,
     topicDefaults: TopicDefaults = TopicDefaults()
   ): Map[String, KafkaClusterChange] =
     DeployTopology.createChangesToDeployTopology(
       resolveTopicConfig,
       isTopicConfigManaged,
+      isTopicConfigValueEquivalent,
       currentDeployedTopologies,
       currentDeployedTopologies.mapValues(_.entity.topologyWithVersion).collect { case (p, Some(pv)) => (p, pv.topology) },
       deployedKafkaClusterItems,

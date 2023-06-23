@@ -121,6 +121,7 @@ private[kafkacluster] object DeployTopology {
     *
     * @param resolveTopicConfig the resolve replica placement function
     * @param isTopicConfigManaged the function deciding which topic config's are managed by kewl
+    * @param isTopicConfigValueEquivalent the function deciding whether a topic config value is equivalent to another value
     * @param currentDeployedTopologies the current set of deployed-topology entities
     * @param currentTopologies the current set of topology entities (in the deployed-topologies)
     * @param deployedKafkaClusterItems the current set of KafkaClusterItems in the kafka cluster
@@ -132,6 +133,7 @@ private[kafkacluster] object DeployTopology {
   def createChangesToDeployTopology(
     resolveTopicConfig: ResolveTopicConfig,
     isTopicConfigManaged: IsTopicConfigManaged,
+    isTopicConfigValueEquivalent: IsTopicConfigValueEquivalent,
     currentDeployedTopologies: Map[TopologyEntityId, EntityState.Live[DeployedTopology]],
     currentTopologies: Map[TopologyEntityId, TopologyToDeploy],
     deployedKafkaClusterItems: Seq[KafkaClusterItemOfTopology],
@@ -218,6 +220,10 @@ private[kafkacluster] object DeployTopology {
       }
       .flatMap {
         case c: KafkaClusterChange.UpdateTopic => c.ignoreNotManagedTopicConfigs(isTopicConfigManaged)
+        case c => Some(c)
+      }
+      .flatMap {
+        case c: KafkaClusterChange.UpdateTopic => c.ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent)
         case c => Some(c)
       }
   }
@@ -607,6 +613,7 @@ private[kafkacluster] trait DeployTopology {
       changes = createChangesToDeployTopology(
         kafkaCluster.resolveTopicConfig,
         kafkaCluster.isTopicConfigManaged,
+        kafkaCluster.isTopicConfigValueEquivalent,
         currentDeployedTopologies,
         currentTopologies,
         deployedKafkaClusterItems,
@@ -721,6 +728,7 @@ private[kafkacluster] trait DeployTopology {
           changes = createChangesToDeployTopology(
             kafkaCluster.resolveTopicConfig,
             kafkaCluster.isTopicConfigManaged,
+            kafkaCluster.isTopicConfigValueEquivalent,
             currentDeployedTopologies,
             currentTopologies,
             deployedKafkaClusterItems,

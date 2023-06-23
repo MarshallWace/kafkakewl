@@ -9,7 +9,7 @@ package com.mwam.kafkakewl.processor.kafkacluster.deployment
 import cats.syntax.option._
 import com.mwam.kafkakewl.domain.deploy.{UnsafeKafkaClusterChangeDescription, UnsafeKafkaClusterChangeOperation, UnsafeKafkaClusterChangePropertyDescription}
 import com.mwam.kafkakewl.domain.kafka.config.TopicConfigKeys
-import com.mwam.kafkakewl.domain.kafkacluster.IsTopicConfigManaged
+import com.mwam.kafkakewl.domain.kafkacluster.{IsTopicConfigManaged, IsTopicConfigValueEquivalent}
 import com.mwam.kafkakewl.utils._
 
 /**
@@ -185,7 +185,7 @@ private[kafkacluster] object KafkaClusterChange {
      *
      * @param isTopicConfigManaged a function deciding whether a config key is managed by kafkakewl or not
      */
-    def ignoreNotManagedTopicConfigs(isTopicConfigManaged: IsTopicConfigManaged): Option[KafkaClusterChange] = {
+    def ignoreNotManagedTopicConfigs(isTopicConfigManaged: IsTopicConfigManaged): Option[KafkaClusterChange.UpdateTopic] = {
       val beforeItemNotManagedKeys = beforeItem.config.keys.filter(key => !isTopicConfigManaged(key)).toSet
 
       // this is the config that needs to be added into afterItem from beforeItem (so that these configs are equal and kafkakewl won't try to remove the ones in before but not in after)
@@ -201,7 +201,28 @@ private[kafkacluster] object KafkaClusterChange {
           }
       }.toMap
 
-      val newAfterItem = afterItem.copy(
+      updatedChange(configFromBeforeIntoAfter)
+    }
+
+    def ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent: IsTopicConfigValueEquivalent): Option[KafkaClusterChange.UpdateTopic] = {
+      val configFromBeforeIntoAfter = afterItem.config
+        .flatMap { case (topicConfigKey, desiredValue) =>
+          beforeItem.config.get(topicConfigKey) match {
+            case Some(actualValue) if desiredValue != actualValue && isTopicConfigValueEquivalent(topicConfigKey, desiredValue, actualValue) =>
+              // This config update is equivalent, we can pretend that the afterItem's config value is the same as the before
+              // (e.g. an external tool changed a topic config but we accept that value and don't want to overwrite it)
+              (topicConfigKey, actualValue).some
+            case _ =>
+              // This config update is not equivalent or there was no actual value, so we really need to set it to the desired value
+              None
+          }
+        }
+
+      updatedChange(configFromBeforeIntoAfter)
+    }
+
+    private def updatedAfterItemFromBefore(configFromBeforeIntoAfter: Map[String, String]): KafkaClusterItem.Topic =
+      afterItem.copy(
         config = afterItem.config ++ configFromBeforeIntoAfter,
         // special rule for replication-factor: if we're adding the "confluent.placement.constraints" config from beforeItem into afterItem,
         // we need to change the replicationFactor too so that it matches beforeItem's (which must be -1)
@@ -216,6 +237,8 @@ private[kafkacluster] object KafkaClusterChange {
         }
       )
 
+    private def updatedChange(configFromBeforeIntoAfter: Map[String, String]): Option[KafkaClusterChange.UpdateTopic] = {
+      val newAfterItem = updatedAfterItemFromBefore(configFromBeforeIntoAfter)
       val newChange = UpdateTopic(beforeItem, newAfterItem)
       if (configFromBeforeIntoAfter.nonEmpty) {
         // only killing the equal before-after if we did any config change in afterItem (it's really just being careful, wanted to keep the current behavior if we don't mess with the afterItem's config)

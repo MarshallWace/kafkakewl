@@ -8,10 +8,22 @@ package com.mwam.kafkakewl.processor.kafkacluster.deployment
 
 import cats.syntax.option._
 import com.mwam.kafkakewl.domain.kafka.config.TopicConfigKeys.confluentPlacementConstraints
-import com.mwam.kafkakewl.domain.kafkacluster.{TopicConfigKeyConstraint, TopicConfigKeyConstraintInclusive}
+import com.mwam.kafkakewl.domain.kafkacluster.{IsTopicConfigValueEquivalent, KafkaCluster, ReplicaPlacementConfigEquivalents, TopicConfigKeyConstraint, TopicConfigKeyConstraintInclusive}
 import org.scalatest.{FlatSpec, Matchers}
 
 class KafkaClusterChangeSpec extends FlatSpec with Matchers {
+  val fourConfluentPlacementConstraints: String =
+    """{
+      |  "version": 1,
+      |  "replicas": [
+      |    { "count": 2, "constraints": {"rack": "east-1"} },
+      |    { "count": 2, "constraints": {"rack": "east-2"} }
+      |  ],
+      |  "observers": [
+      |  ]
+      |}
+      |""".stripMargin
+
   val twoTwoConfluentPlacementConstraints: String =
     """{
       |  "version": 1,
@@ -44,8 +56,10 @@ class KafkaClusterChangeSpec extends FlatSpec with Matchers {
   val topicWithCompaction: KafkaClusterItem.Topic = KafkaClusterItem.Topic("topic", config = Map("cleanup.policy" -> "compact"))
   val topicWithRFOne: KafkaClusterItem.Topic = topic.withReplicationFactor(1)
   val topicWithTwoPartitions: KafkaClusterItem.Topic = topic.withPartitions(2)
+  val topicWithFourPlacement: KafkaClusterItem.Topic = topic.withConfig(confluentPlacementConstraints, fourConfluentPlacementConstraints).withReplicationFactor(-1)
   val topicWithTwoTwoPlacement: KafkaClusterItem.Topic = topic.withConfig(confluentPlacementConstraints, twoTwoConfluentPlacementConstraints).withReplicationFactor(-1)
   val topicWithThreeOnePlacement: KafkaClusterItem.Topic = topic.withConfig(confluentPlacementConstraints, threeOneConfluentPlacementConstraints).withReplicationFactor(-1)
+  val topicWithCompactionAndFourPlacement: KafkaClusterItem.Topic = topicWithFourPlacement.withConfig("cleanup.policy", "compact")
   val topicWithCompactionAndTwoTwoPlacement: KafkaClusterItem.Topic = topicWithTwoTwoPlacement.withConfig("cleanup.policy", "compact")
   val topicWithTwoPartitionsAndTwoTwoPlacement: KafkaClusterItem.Topic = topicWithTwoTwoPlacement.withPartitions(2)
   val topicWithUnmanagedConfig: KafkaClusterItem.Topic = topic.withConfig("leader.replication.throttled.replicas", "1")
@@ -67,6 +81,10 @@ class KafkaClusterChangeSpec extends FlatSpec with Matchers {
     )
   )
 
+  val replicaPlacementConfigEquivalents: ReplicaPlacementConfigEquivalents = Map(
+    fourConfluentPlacementConstraints -> Seq(twoTwoConfluentPlacementConstraints)
+  )
+
   def updateTopic(before: KafkaClusterItem.Topic, after: KafkaClusterItem.Topic): KafkaClusterChange.UpdateTopic = KafkaClusterChange.UpdateTopic(before, after)
 
   def isManaged(topicConfigKey: String): Boolean = {
@@ -76,6 +94,8 @@ class KafkaClusterChangeSpec extends FlatSpec with Matchers {
   def isManaged(additionalManagedTopicConfigKeys: Set[String])(topicConfigKey: String): Boolean = {
     defaultTopicConfigsForTopologies.isIncluded(topicConfigKey) || additionalManagedTopicConfigKeys.contains(topicConfigKey)
   }
+
+  val isTopicConfigValueEquivalent: IsTopicConfigValueEquivalent = KafkaCluster.isTopicConfigValueEquivalent(replicaPlacementConfigEquivalents, _, _, _)
 
   "topic-updates without any non-managed configs" should "work" in {
     updateTopic(topic, topic).ignoreNotManagedTopicConfigs(isManaged) shouldBe updateTopic(topic, topic).some
@@ -130,5 +150,25 @@ class KafkaClusterChangeSpec extends FlatSpec with Matchers {
   "topic-updates with unmanaged config in the before and after" should "work" in {
     updateTopic(topicWithUnmanagedConfig, topicWithUnmanagedConfigOtherValue).ignoreNotManagedTopicConfigs(isManaged) shouldBe updateTopic(topicWithUnmanagedConfig, topicWithUnmanagedConfigOtherValue).some
     updateTopic(topicWithUnmanagedConfigAndCompaction, topicWithUnmanagedConfigOtherValueAndCompaction).ignoreNotManagedTopicConfigs(isManaged) shouldBe updateTopic(topicWithUnmanagedConfigAndCompaction, topicWithUnmanagedConfigOtherValueAndCompaction).some
+  }
+
+  "topic-updates with the same confluent-placement-constraints" should "work" in {
+    updateTopic(topicWithTwoTwoPlacement, topicWithTwoTwoPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithTwoTwoPlacement, topicWithTwoTwoPlacement).some
+    updateTopic(topicWithTwoTwoPlacement, topicWithCompactionAndTwoTwoPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithTwoTwoPlacement, topicWithCompactionAndTwoTwoPlacement).some
+  }
+
+  "topic-updates with the where the confluent-placement-constraints is set only either in the before or in the after" should "work" in {
+    updateTopic(topicWithCompaction, topicWithCompactionAndTwoTwoPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithCompaction, topicWithCompactionAndTwoTwoPlacement).some
+    updateTopic(topicWithCompactionAndTwoTwoPlacement, topicWithCompaction).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithCompactionAndTwoTwoPlacement, topicWithCompaction).some
+  }
+
+  "topic-updates with different but equivalent confluent-placement-constraints set in before and after" should "work" in {
+    updateTopic(topicWithTwoTwoPlacement, topicWithFourPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe none
+    updateTopic(topicWithTwoTwoPlacement, topicWithCompactionAndFourPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithTwoTwoPlacement, topicWithCompactionAndTwoTwoPlacement).some
+  }
+
+  "topic-updates with different and not equivalent confluent-placement-constraints set in before and after" should "work" in {
+    updateTopic(topicWithFourPlacement, topicWithTwoTwoPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithFourPlacement, topicWithTwoTwoPlacement).some
+    updateTopic(topicWithCompactionAndFourPlacement, topicWithCompactionAndTwoTwoPlacement).ignoreEquivalentTopicConfigs(isTopicConfigValueEquivalent) shouldBe updateTopic(topicWithCompactionAndFourPlacement, topicWithCompactionAndTwoTwoPlacement).some
   }
 }
