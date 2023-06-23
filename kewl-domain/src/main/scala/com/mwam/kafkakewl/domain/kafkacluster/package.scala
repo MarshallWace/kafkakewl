@@ -54,4 +54,14 @@ package object kafkacluster {
 
   type IsTopicConfigManaged = String => Boolean
   val allTopicConfigsAreManaged: IsTopicConfigManaged = _ => true
+
+  type IsTopicConfigValueEquivalent = (String, String, String) => Boolean
+  val sameTopicConfigAreEquivalent: IsTopicConfigValueEquivalent = (_, desiredValue, actualValue) => desiredValue == actualValue
+  /**
+   * Replica-placement constraints can have a list of equivalent constraints that we consider equal. E.g. if we set
+   * the replica-placement constraint to X when the topic is created, but X has a list of equivalents: [Y, Z], then
+   * we won't update the topic config even if we find that the kafka cluster has Y or Z as replica-placement.
+   */
+  type ReplicaPlacementConfigEquivalents = Map[String, Seq[String]]
+  val emptyReplicaPlacementConfigEquivalents: ReplicaPlacementConfigEquivalents = Map.empty
 }

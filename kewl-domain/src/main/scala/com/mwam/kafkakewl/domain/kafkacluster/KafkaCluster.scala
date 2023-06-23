@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.domain
 
 package kafkacluster
 
+import com.mwam.kafkakewl.domain.kafka.config.TopicConfigKeys
 import com.mwam.kafkakewl.domain.topology.ReplicaPlacementId
 
 final case class KafkaClusterEntityId(id: String) extends AnyVal with EntityId
@@ -26,6 +27,7 @@ final case class KafkaClusterEntityId(id: String) extends AnyVal with EntityId
   * @param nonKewl the non-kewl resources in this cluster
   * @param requiresAuthorizationCode true if any change requires an authorization code
   * @param replicaPlacementConfigs the replica placement configs by their identifier
+  * @param replicaPlacementConfigEquivalents the equivalent replica-placement configs by replica placement
   * @param defaultReplicaPlacementId the default replica placement or none, if there isn't any default (e.g. when replicaPlacements is empty)
   * @param topicConfigKeysAllowedInTopologies the topic config constraints that are allowed in topologies' topics
   * @param additionalManagedTopicConfigKeys the additional topic config constraints that are managed by kafkakewl (everything else will be ignored and left as it is in the kafka topic)
@@ -46,6 +48,7 @@ final case class KafkaCluster(
   nonKewl: NonKewlKafkaResources = NonKewlKafkaResources(),
   requiresAuthorizationCode: Boolean = false,
   replicaPlacementConfigs: ReplicaPlacements = emptyReplicaPlacements,
+  replicaPlacementConfigEquivalents: ReplicaPlacementConfigEquivalents = emptyReplicaPlacementConfigEquivalents,
   defaultReplicaPlacementId: Option[ReplicaPlacementId] = None,
   topicConfigKeysAllowedInTopologies: TopicConfigKeyConstraintInclusive = TopicConfigKeyConstraintInclusive(),
   additionalManagedTopicConfigKeys: TopicConfigKeyConstraintExclusive = TopicConfigKeyConstraintExclusive(),
@@ -72,6 +75,24 @@ final case class KafkaCluster(
 
   def isTopicConfigKeyAllowedInTopologies(topicConfigKey: String): Boolean = topicConfigKeysAllowedInTopologies.isIncluded(topicConfigKey)
   def isTopicConfigManaged(topicConfigKey: String): Boolean = isTopicConfigKeyAllowedInTopologies(topicConfigKey) || additionalManagedTopicConfigKeys.isIncluded(topicConfigKey)
+
+  def isTopicConfigValueEquivalent(topicConfigKey: String, desiredValue: String, actualValue: String): Boolean =
+    KafkaCluster.isTopicConfigValueEquivalent(replicaPlacementConfigEquivalents, topicConfigKey, desiredValue, actualValue)
+}
+
+object KafkaCluster {
+  def isTopicConfigValueEquivalent(
+    replicaPlacementConfigEquivalents: ReplicaPlacementConfigEquivalents,
+    topicConfigKey: String,
+    desiredValue: String,
+    actualValue: String
+  ): Boolean =
+    if (topicConfigKey == TopicConfigKeys.confluentPlacementConstraints) {
+      // replica-placement constraints are considered equivalent not only when they are equal but when the desired value has the actualValue as an equivalent constraint
+      desiredValue == actualValue || replicaPlacementConfigEquivalents.get(desiredValue).exists(_.contains(actualValue))
+    } else {
+      desiredValue == actualValue
+    }
 }
 
 object KafkaClusterStateChange {
