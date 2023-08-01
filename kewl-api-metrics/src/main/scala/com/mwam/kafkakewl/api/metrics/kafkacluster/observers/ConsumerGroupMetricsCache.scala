@@ -76,7 +76,7 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
       .flatMap(_.get(group))
       .flatMap(_.get(topic))
 
-  private def getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Long] =
+  private def getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Long] =
     getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values
         // the lag defaults to the high-offset, if that's missing, it's just zero
@@ -84,15 +84,15 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
         .sum
       )
 
-  private def getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Double] =
+  private def getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Double] =
     getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values.sumConsumptionRate.getOrElse(0.0))
 
-  private def getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Int] =
+  private def getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Int] =
     getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values.combineStatus.severity)
 
-  private def getCurrentPartitionLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String, partition: Int): Option[Long] = {
+  private def getCurrentPartitionLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String, partition: Int): Option[Long] = {
     consumerGroupMetrics.get(kafkaClusterId)
       .flatMap(_.get(ConsumerGroupTopicPartition(group, topic, partition)))
       // the lag defaults to the high-offset, if that's missing, it's just zero
@@ -123,17 +123,17 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
 
     val lagTopicGaugeName = topicGaugeNameOf(lag)
     metrics.createGaugeIfDoesNotExistFast(lagTopicGaugeName, defaultValue = 0L)(
-      getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId, lagTopicGaugeName, group, topic)
+      getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId, group, topic)
     )
 
     val consumedRateTopicGaugeName = topicGaugeNameOf(consumedRate)
     metrics.createGaugeIfDoesNotExistFast(consumedRateTopicGaugeName, defaultValue = 0.0)(
-      getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId, consumedRateTopicGaugeName, group, topic)
+      getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId, group, topic)
     )
 
     val consumerStatusTopicGaugeName = topicGaugeNameOf(consumerStatus)
     metrics.createGaugeIfDoesNotExistFast(consumerStatusTopicGaugeName, defaultValue = ConsumerGroupStatus.Unknown.severity)(
-      getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId, consumerStatusTopicGaugeName, group, topic)
+      getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId, group, topic)
     )
   }
 
