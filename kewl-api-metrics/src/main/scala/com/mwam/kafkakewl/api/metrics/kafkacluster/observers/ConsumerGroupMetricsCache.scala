@@ -71,13 +71,13 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
       }
   }
 
-  private def getCurrentTopicConsumerGroupMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Map[ConsumerGroupTopicPartition, ConsumerGroupMetrics]] =
+  private def getCurrentTopicConsumerGroupMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Map[ConsumerGroupTopicPartition, ConsumerGroupMetrics]] =
     getConsumerGroupMetricsByConsumerGroupAndTopic(kafkaClusterId)
       .flatMap(_.get(group))
       .flatMap(_.get(topic))
 
   private def getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Long] =
-    getCurrentTopicConsumerGroupMetrics(kafkaClusterId, gaugeName, group, topic)
+    getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values
         // the lag defaults to the high-offset, if that's missing, it's just zero
         .map { cgm => cgm.lag.orElse(cgm.partitionHigh.map(_.offset)).getOrElse(0L) }
@@ -85,13 +85,11 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
       )
 
   private def getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Double] =
-    getConsumerGroupMetricsByConsumerGroupAndTopic(kafkaClusterId)
-      .flatMap(_.get(group))
-      .flatMap(_.get(topic))
+    getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values.sumConsumptionRate.getOrElse(0.0))
 
   private def getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String): Option[Int] =
-    getCurrentTopicConsumerGroupMetrics(kafkaClusterId, gaugeName, group, topic)
+    getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values.combineStatus.severity)
 
   private def getCurrentPartitionLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, gaugeName: String, group: String, topic: String, partition: Int): Option[Long] = {
