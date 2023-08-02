@@ -24,7 +24,7 @@ trait ConsumerGroupMetricsCache {
   }
 }
 
-class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
+class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) extends ConsumerGroupMetricsCache
   with KafkaClusterObserver
   with ConsumerGroupMetricsObserver
   with DefaultInstrumented {
@@ -131,10 +131,12 @@ class ConsumerGroupMetricsCacheImpl extends ConsumerGroupMetricsCache
       getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId, group, topic)
     )
 
-    val consumerStatusTopicGaugeName = topicGaugeNameOf(consumerStatus)
-    metrics.createGaugeIfDoesNotExistFast(consumerStatusTopicGaugeName, defaultValue = ConsumerGroupStatus.Unknown.severity)(
-      getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId, group, topic)
-    )
+    if (consumerStatusExposedAsMetrics) {
+      val consumerStatusTopicGaugeName = topicGaugeNameOf(consumerStatus)
+      metrics.createGaugeIfDoesNotExistFast(consumerStatusTopicGaugeName, defaultValue = ConsumerGroupStatus.Unknown.severity)(
+        getCurrentTopicConsumerStatusForGaugeMetrics(kafkaClusterId, group, topic)
+      )
+    }
   }
 
   override def remove(kafkaClusterId: KafkaClusterEntityId): Unit = {
