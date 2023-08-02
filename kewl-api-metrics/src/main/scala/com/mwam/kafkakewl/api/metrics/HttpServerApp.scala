@@ -74,7 +74,7 @@ object HttpServerApp extends App
   // caches, metrics collectors
   val topicInfoStateCache = new TopicInfoCacheImpl()
   val topicMetricsCache = new TopicMetricsCacheImpl(windowDuration = 60.seconds)
-  val consumerGroupMetricsCache = new ConsumerGroupMetricsCacheImpl()
+  val consumerGroupMetricsCache = new ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics)
 
   val consumerGroupStatusEvaluator = new ConsumerGroupStatusEvaluator(
     consumerGroupMetricsCache,

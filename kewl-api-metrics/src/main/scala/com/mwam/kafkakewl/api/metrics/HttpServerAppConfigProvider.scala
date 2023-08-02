@@ -89,4 +89,6 @@ trait HttpServerAppConfigProvider extends ExecutorContextFactory with HttpConfig
     .split(',').map(_.trim).filter(_.nonEmpty).map(FlexibleName.Regex)
   val consumeAfterConsumerGroupOffsetNumberOfWorkers: Int = kafkaKewlApiMetricsConfig.getIntOrNoneIfEmpty("lag-evaluating.consume-after-consumer-group-offset.number-of-workers").getOrElse(10)
   val consumeAfterConsumerGroupOffsetPollDurationMillis: Int = kafkaKewlApiMetricsConfig.getIntOrNoneIfEmpty("lag-evaluating.consume-after-consumer-group-offset.poll-duration-millis").getOrElse(100)
+
+  val consumerStatusExposedAsMetrics: Boolean = kafkaKewlApiMetricsConfig.getBooleanOrNone("consumer-status-exposed-as-metrics").getOrElse(false)
 }

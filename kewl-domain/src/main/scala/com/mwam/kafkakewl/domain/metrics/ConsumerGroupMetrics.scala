@@ -38,7 +38,7 @@ sealed trait ConsumerGroupStatus {
   /**
     * The higher the number the more severe the status is.
     */
-  def severity: Integer
+  def severity: Int
 
   /**
     * Aggregates 2 ConsumerGroupStatuses so that the result is the more severe.
