@@ -25,16 +25,16 @@ For details see below.
 ## ConsumerGroupStatus
 
 It can be one of the following:
-- `Ok` - there are new offsets committed for the consumer group and the lag has decreased at least once in the last monitoring window or the lag is zero
+- `Ok` - there are new offsets committed for the consumer group and the lag has decreased at least once (or was zero) in the last monitoring window
 - `Unknown` - kafkakewl can't tell the status of the consumer group right now (it typically happens right after start-up when it doesn't have enough data-points about the lag)
-- `Warning` - there are new offsets committed for the consumer group but the lag never decreased in the last monitoring window
-- `Error` - **NA** - there are no new offsets committed, but there are offsets committed in the last monitoring window - the consumer is not stopped, but not making progress
-- `MaybeStopped` - there are no new offsets committed, maybe the consumer doesn't commit at all or commits the same offset in the last monitoring window - most likely it's stopped
-- `Stopped` - **NA** - the consumer hasn't committed any new offset in the last monitoring window
+- `Warning` - there are new offsets committed for the consumer group but the lag is increasing in the last monitoring window
+- `Error` - there are no new offsets committed, but there are offsets committed (the same ones) in the last monitoring window - the consumer is not stopped, but not making progress
+- `MaybeStopped` - **NA** - there are no new offsets committed, maybe the consumer doesn't commit at all or commits the same offset in the last monitoring window - most likely it's stopped
+- `Stopped` - the consumer hasn't committed any new offset in the last monitoring window
 
 Note that the monitoring window is 5 minutes by default. It can be changed on the [topology's application](../topology/TopologyApplication.md) with the `consumerLagWindowSeconds` property.
 
-Note the `Error` and `Stopped` are not applicable right now: they work only if kafkakewl consumed the `__consumer_offsets` topic which it doesn't do, but polls the consumer groups' for the latest offsets.
+Note the `MaybeStopped` is not applicable right now: they work only if kafkakewl polled the consumer groups' for the latest offsets which it doesn't do, but consumes the `__consumer_offsets` topic.
 
 ## AggregatedConsumerGroupStatus
 
