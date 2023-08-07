@@ -121,6 +121,10 @@ You need to [configure the **kafkakewl-api-metrics**](docs/configuration-kewl-ap
 
 If you run it with docker, to override the default `application.conf`, you'll need to mount your conf file to `/usr/src/app/.kafkakewl-api-metrics-overrides.conf`
 
+# **kafkakewl-api-metrics** prometheus metrics
+
+The **kafkakewl-api-metrics** service exposes [prometheus metrics about topics and consumer groups](./docs/prometheus-metrics-kafkakewl-api-metrics.md). 
+
 # Getting Started
 
 So you configured your **kafkakewl-api** and **kafkakewl-api-metrics** services, you started them and they haven't failed. Now they are ready to be used, but in order to deploy topologies, a bit more setup is needed:
