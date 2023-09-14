@@ -1,0 +1,113 @@
+<configuration>
+    <variable name="LOGBACK_LOCAL_FILE_APPENDER" value="${LOGBACK_LOCAL_FILE_APPENDER:-local-file}" />
+    <variable name="LOGBACK_INSTANCE" value="${LOGBACK_INSTANCE:-develop}" />
+    <variable name="LOGBACK_ENV" value="${LOGBACK_ENV:-dev}" />
+    <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout}" />
+    <variable name="LOGBACK_LOCALFILE_ROOT" value="${LOGBACK_LOCALFILE_ROOT:-./logs}" />
+    <variable name="LOGBACK_LOCALFILE_NAME" value="${LOGBACK_LOCALFILE_NAME:-./com.mwam.kafkakewl.deploy}" />
+
+    <!-- changing a kafka-log messages' levels, etc... to reduce warn/error logs when it's unnecessary -->
+    <turboFilter class="com.mwam.kafkakewl.utils.logging.LogFilter">
+    </turboFilter>
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%date{ISO8601} [%X{userName}] [%X{correlationId}] [%X{dryRun}] [%X{command}] [%X{topologyId}] [%-5level] %logger{0}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="stdout-json" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="com.mwam.kafkakewl.utils.logging.JsonLayout">
+                <jsonFormatter class="ch.qos.logback.contrib.jackson.JacksonJsonFormatter"/>
+                <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSS</timestampFormat>
+                <timestampFormatTimezoneId>UTC</timestampFormatTimezoneId>
+                <appendLineSeparator>true</appendLineSeparator>
+                <application>kafkakewl-deploy</application>
+                <version>${MW_APP_TAG_VERSION:-0.0.0}</version>
+                <instance>${LOGBACK_INSTANCE}</instance>
+                <customFields>
+                    <field>
+                        <name>env</name>
+                        <value>${LOGBACK_ENV}</value>
+                    </field>
+                    <field>
+                        <name>userName</name>
+                        <value>%X{userName}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>correlationId</name>
+                        <value>%X{correlationId}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>dryRun</name>
+                        <value>%X{dryRun}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>command</name>
+                        <value>%X{command}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>change</name>
+                        <value>%X{change}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>topologyId</name>
+                        <value>%X{topologyId}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>stacktrace</name>
+                        <value>%ex</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>logger</name>
+                        <value>%logger{0}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>class</name>
+                        <value>%class</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>package</name>
+                        <value>%.-18logger</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>method</name>
+                        <value>%method</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                </customFields>
+            </layout>
+        </encoder>
+    </appender>
+
+    <appender name="local-file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGBACK_LOCALFILE_ROOT}/${LOGBACK_LOCALFILE_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGBACK_LOCALFILE_ROOT}/${LOGBACK_LOCALFILE_NAME}-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%date{ISO8601} [%X{userName}] [%X{correlationId}] [%X{dryRun}] [%X{command}] [%X{topologyId}] [%-5level] %logger{0}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="nop" class="ch.qos.logback.core.helpers.NOPAppender">
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="${LOGBACK_STDOUT_APPENDER}"/>
+        <appender-ref ref="${LOGBACK_LOCAL_FILE_APPENDER}" />
+    </root>
+</configuration>
