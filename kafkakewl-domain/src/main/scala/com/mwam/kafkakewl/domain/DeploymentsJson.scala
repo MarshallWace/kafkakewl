@@ -13,16 +13,12 @@ object DeploymentsJson {
 
   given JsonEncoder[DeploymentOptions] = DeriveJsonEncoder.gen[DeploymentOptions]
   given JsonDecoder[DeploymentOptions] = DeriveJsonDecoder.gen[DeploymentOptions]
-
   given JsonEncoder[Deployments] = DeriveJsonEncoder.gen[Deployments]
   given JsonDecoder[Deployments] = DeriveJsonDecoder.gen[Deployments]
-
   given JsonEncoder[DeploymentsResult] = DeriveJsonEncoder.gen[DeploymentsResult]
   given JsonDecoder[DeploymentsResult] = DeriveJsonDecoder.gen[DeploymentsResult]
-
   given JsonEncoder[TopologyDeploymentStatus] = DeriveJsonEncoder.gen[TopologyDeploymentStatus]
   given JsonDecoder[TopologyDeploymentStatus] = DeriveJsonDecoder.gen[TopologyDeploymentStatus]
-
   given JsonEncoder[TopologyDeployment] = DeriveJsonEncoder.gen[TopologyDeployment]
   given JsonDecoder[TopologyDeployment] = DeriveJsonDecoder.gen[TopologyDeployment]
 }

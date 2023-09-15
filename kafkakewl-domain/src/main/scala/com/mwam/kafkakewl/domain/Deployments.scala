@@ -8,7 +8,7 @@ package com.mwam.kafkakewl.domain
 
 final case class DeploymentOptions(
   // TODO make allowing unsafe operations more granular if needed
-  allowUnsafe: Boolean
+  allowUnsafe: Boolean = false
 )
 
 /**
@@ -19,9 +19,9 @@ final case class DeploymentOptions(
  * @param delete the topology-ids to remove
  */
 final case class Deployments(
-  options: DeploymentOptions,
-  deploy: Seq[Topology],
-  delete: Seq[TopologyId]
+  options: DeploymentOptions = DeploymentOptions(),
+  deploy: Seq[Topology] = Seq.empty,
+  delete: Seq[TopologyId] = Seq.empty
 )
 
 final case class DeploymentsResult()

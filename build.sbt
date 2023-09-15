@@ -7,7 +7,11 @@ ThisBuild / organization        := "com.mwam.kafkakewl"
 ThisBuild / organizationName    := orgName
 ThisBuild / startYear           := Some(year)
 
-ThisBuild / scalacOptions       ++= Seq("-Xmax-inlines", "64", "-Wunused:imports", "-Wunused:params", "-deprecation", "-feature")
+ThisBuild / scalacOptions       ++= Seq(
+  "-Xmax-inlines", "64",
+  "-Yretain-trees", // so that zio-json supports default values
+  "-Wunused:imports", "-Wunused:params", "-deprecation", "-feature"
+)
 
 // Have to do this for the root project and enable it for the sub-projects as well as setting the headerLicense for them.
 disablePlugins(HeaderPlugin)

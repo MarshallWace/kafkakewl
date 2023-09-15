@@ -1,0 +1,43 @@
+### Deploying a test topology
+POST localhost:8080/api/v1/deployments
+Content-Type: application/json
+
+{
+  "options": {
+    "allowUnsafe": false
+  },
+  "deploy": [
+    {
+      "id": "kewltest-test-topology",
+      "namespace": "kewltest",
+      "topics": [
+        { "name":  "kewltest.test-topic-1" },
+        { "name":  "kewltest.test-topic-1", "partitions": 3, "config": { "retention.ms": "-1" } }
+      ],
+      "applications": [
+        { "id": "source", "user": "user-source" },
+        { "id": "sink", "user": "user-sink" }
+      ],
+      "relationships": [
+        {
+          "application": "source",
+          "produce": [
+            { "topic": "kewltest.test-topic-1" },
+            { "topic": "kewltest.test-topic-2" }
+          ]
+        },
+        {
+          "application": "sink",
+          "consume": [
+            { "topic": "kewltest.test-topic-1" },
+            { "topic": "kewltest.test-topic-2" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+### Getting all topology deployments
+GET localhost:8080/api/v1/deployments
+Accept: application/json
