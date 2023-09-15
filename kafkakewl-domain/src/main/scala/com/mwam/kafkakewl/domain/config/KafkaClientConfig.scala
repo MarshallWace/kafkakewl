@@ -20,6 +20,6 @@ object KafkaClientConfig {
     ZLayer.fromZIO {
       for {
         kafkaClusterConfig <- ZIO.service[KafkaClusterConfig]
-      } yield kafkaClusterConfig.clientConfig
+      } yield kafkaClusterConfig.client
     }
 }

@@ -6,6 +6,7 @@
 
 package com.mwam.kafkakewl.deploy
 
+import com.mwam.kafkakewl.common.persistence.KafkaPersistentStoreConfig
 import com.mwam.kafkakewl.domain.config.{HttpConfig, KafkaClusterConfig}
 import com.mwam.kafkakewl.utils.config.TypesafeConfigExtensions
 import zio.config.magnolia.descriptor
@@ -15,9 +16,10 @@ import zio.metrics.connectors.MetricsConfig
 import zio.{ZIO, ZLayer}
 
 final case class MainConfig(
-  kafkaClusterConfig: KafkaClusterConfig,
-  httpConfig: HttpConfig,
-  metricsConfig: MetricsConfig
+  kafkaCluster: KafkaClusterConfig,
+  http: HttpConfig,
+  kafkaPersistentStore: KafkaPersistentStoreConfig,
+  metrics: MetricsConfig
 )
 
 object MainConfig {
@@ -36,7 +38,7 @@ object KafkaClusterConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.kafkaClusterConfig
+      } yield mainConfig.kafkaCluster
     }
 }
 
@@ -45,7 +47,16 @@ object HttpConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.httpConfig
+      } yield mainConfig.http
+    }
+}
+
+object KafkaPersistentStoreConfig {
+  val live: ZLayer[MainConfig, Nothing, KafkaPersistentStoreConfig] =
+    ZLayer.fromZIO {
+      for {
+        mainConfig <- ZIO.service[MainConfig]
+      } yield mainConfig.kafkaPersistentStore
     }
 }
 
@@ -54,6 +65,6 @@ object MetricsConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.metricsConfig
+      } yield mainConfig.metrics
     }
 }

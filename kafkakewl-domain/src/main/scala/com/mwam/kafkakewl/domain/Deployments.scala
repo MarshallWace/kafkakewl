@@ -49,3 +49,5 @@ final case class TopologyDeployment(
   status: TopologyDeploymentStatus,
   topology: Option[Topology]
 )
+
+type TopologyDeployments = Map[TopologyId, TopologyDeployment]
