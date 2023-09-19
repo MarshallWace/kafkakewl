@@ -17,7 +17,7 @@ import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.common.config.TopicConfig
 import zio.*
 import zio.json.*
-import zio.kafka.producer.Producer
+import zio.kafka.producer.*
 import zio.kafka.serde.Serde
 import zio.kafka.admin.*
 import zio.stream.*
@@ -27,7 +27,7 @@ import scala.collection.mutable.ListBuffer
 class KafkaPersistentStore(
   kafkaClientConfig: KafkaClientConfig,
   kafkaPersistentStoreConfig: KafkaPersistentStoreConfig,
-  kafkaProducer: Producer,
+  kafkaProducer: TransactionalProducer,
   initializedRef: Ref.Synchronized[Boolean]
 ) extends PersistentStore {
   private object KafkaSerde {
@@ -69,14 +69,18 @@ class KafkaPersistentStore(
       }
 
   override def save(topologyDeployments: TopologyDeployments): Task[Unit] =
-    initializeIfNeeded *>
-      ZIO.foreach(topologyDeployments.values) { td =>
-        for {
-          recordMetadataWithDuration <- kafkaProducer.produce(topicName, td.topologyId, td, KafkaSerde.key, KafkaSerde.value).timed
-          (duration, recordMetadata) = recordMetadataWithDuration
-          _ <- ZIO.logInfo(s"saved topology ${td.topologyId} into $topicName kafka topic: P#${recordMetadata.partition} @${recordMetadata.offset} in ${duration.toMillis / 1000.0} seconds")
-        } yield ()
-      }.unit
+    initializeIfNeeded *> ZIO.scoped {
+      for {
+        txn <- kafkaProducer.createTransaction
+        _ <- ZIO.foreachDiscard(topologyDeployments.values) { td =>
+          for {
+            recordMetadataWithDuration <- txn.produce(topicName, td.topologyId, td, KafkaSerde.key, KafkaSerde.value, offset = None).timed
+            (duration, recordMetadata) = recordMetadataWithDuration
+            _ <- ZIO.logInfo(s"saved topology ${td.topologyId} into $topicName kafka topic: P#${recordMetadata.partition} @${recordMetadata.offset} in ${duration.toMillis / 1000.0} seconds")
+          } yield ()
+        }
+      } yield ()
+    }
 
   override def stream(compactHistory: Boolean): Stream[Throwable, TopologyDeployments] =
     ZStream.unwrapScoped {
@@ -172,12 +176,20 @@ class KafkaPersistentStore(
 }
 
 object KafkaPersistentStore {
-  val live: ZLayer[KafkaClientConfig & KafkaPersistentStoreConfig & Producer, Nothing, KafkaPersistentStore] =
-    ZLayer {
+  val live: ZLayer[KafkaClientConfig & KafkaPersistentStoreConfig, Throwable, KafkaPersistentStore] =
+    ZLayer.scoped {
       for {
         kafkaClientConfig <- ZIO.service[KafkaClientConfig]
         kafkaPersistentStoreConfig <- ZIO.service[KafkaPersistentStoreConfig]
-        producer <- ZIO.service[Producer]
+        producer <- TransactionalProducer.make(
+          TransactionalProducerSettings(
+            kafkaClientConfig.brokersList,
+            30.seconds,
+            properties = kafkaClientConfig.additionalConfig,
+            kafkaPersistentStoreConfig.transactionalId,
+            4096
+          )
+        )
         initialized <- Ref.Synchronized.make(false)
       } yield KafkaPersistentStore(kafkaClientConfig, kafkaPersistentStoreConfig, producer, initialized)
     }

@@ -13,5 +13,6 @@ final case class KafkaPersistentStoreTopicConfig(
   reCreate: Boolean = false
 )
 final case class KafkaPersistentStoreConfig(
-  topic: KafkaPersistentStoreTopicConfig = KafkaPersistentStoreTopicConfig()
+  topic: KafkaPersistentStoreTopicConfig = KafkaPersistentStoreTopicConfig(),
+  transactionalId: String = "kewl.persistent-store.transactional-id"
 )

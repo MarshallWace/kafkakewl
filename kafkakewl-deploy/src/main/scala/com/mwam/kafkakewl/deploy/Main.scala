@@ -7,7 +7,6 @@
 package com.mwam.kafkakewl.deploy
 
 import com.mwam.kafkakewl.common.http.HttpServer
-import com.mwam.kafkakewl.common.kafka.KafkaProducer
 import com.mwam.kafkakewl.common.persistence.{KafkaPersistentStore, PersistentStore}
 import com.mwam.kafkakewl.common.telemetry.GlobalTracer
 import com.mwam.kafkakewl.deploy.endpoints.*
@@ -70,7 +69,6 @@ object Main extends ZIOAppDefault {
       HttpConfig.live,
       KafkaPersistentStoreConfig.live,
       MetricsConfig.live,
-      KafkaProducer.live,
       KafkaPersistentStore.live,
       TopologyDeploymentsService.live,
       DeploymentsEndpoints.live,
