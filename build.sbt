@@ -124,23 +124,35 @@ lazy val common = project
   )
 
 lazy val deploy = project
-  .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JavaAppPackaging, AutomateHeaderPlugin)
   .in(file("kafkakewl-deploy"))
   .dependsOn(utils, domain, common)
   .settings(
     name := "kafkakewl-deploy",
     headerLicense := license,
+    // there is a bug in sbt / scalaDoc generation with scala 3 / zio:
+    // -- Error: typesafe/shared/src/main/scala/zio/config/typesafe/TypesafeConfigSource.scala:15:0
+    // undefined: new com.github.ghik.silencer.silent # -1: TermRef(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class ghik)),object silencer),silent),<init>) at readTasty
+    // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
+    packageDoc / publishArtifact := false,
+    Compile / mainClass := Some("com.mwam.kafkakewl.deploy.Main"),
     libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
     testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
   )
 
 lazy val metrics = project
-  .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JavaAppPackaging, AutomateHeaderPlugin)
   .in(file("kafkakewl-metrics"))
   .dependsOn(utils, domain, common)
   .settings(
     name := "kafkakewl-metrics",
     headerLicense := license,
+    // there is a bug in sbt / scalaDoc generation with scala 3 / zio:
+    // -- Error: typesafe/shared/src/main/scala/zio/config/typesafe/TypesafeConfigSource.scala:15:0
+    // undefined: new com.github.ghik.silencer.silent # -1: TermRef(TypeRef(TermRef(ThisType(TypeRef(NoPrefix,module class ghik)),object silencer),silent),<init>) at readTasty
+    // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
+    packageDoc / publishArtifact := false,
+    Compile / mainClass := Some("com.mwam.kafkakewl.metrics.Main"),
     libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
     testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
   )
