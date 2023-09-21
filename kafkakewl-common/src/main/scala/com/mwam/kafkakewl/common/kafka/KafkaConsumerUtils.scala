@@ -91,6 +91,7 @@ final case class CompactedConsumeResult[Key, Value](
 
 object KafkaConsumerUtils {
   import KafkaConsumerExtensions.*
+  import KafkaClientConfigExtensions.*
 
   def kafkaConsumer[Key, Value](
     kafkaClientConfig: KafkaClientConfig,

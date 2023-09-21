@@ -15,10 +15,10 @@ import zio.config.{ReadError, read}
 import zio.metrics.connectors.MetricsConfig
 
 final case class MainConfig(
-  kafkaClusterConfig: KafkaClusterConfig,
-  consumerOffsetsSourceConfig: ConsumerOffsetsSourceConfig,
-  httpConfig: HttpConfig,
-  metricsConfig: MetricsConfig
+  kafkaCluster: KafkaClusterConfig,
+  consumerOffsetsSource: ConsumerOffsetsSourceConfig,
+  http: HttpConfig,
+  metrics: MetricsConfig
 )
 
 final case class ConsumerOffsetsSourceConfig(
@@ -44,7 +44,7 @@ object KafkaClusterConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.kafkaClusterConfig
+      } yield mainConfig.kafkaCluster
     }
 }
 
@@ -53,7 +53,7 @@ object ConsumerOffsetsSourceConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.consumerOffsetsSourceConfig
+      } yield mainConfig.consumerOffsetsSource
     }
 }
 
@@ -62,7 +62,7 @@ object HttpConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.httpConfig
+      } yield mainConfig.http
     }
 }
 
@@ -71,6 +71,6 @@ object MetricsConfig {
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.metricsConfig
+      } yield mainConfig.metrics
     }
 }

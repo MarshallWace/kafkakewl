@@ -6,14 +6,14 @@
 
 package com.mwam.kafkakewl.deploy.services
 
-import com.mwam.kafkakewl.deploy.persistence.PersistentStore
+import com.mwam.kafkakewl.common.persistence.PersistentStore
 import com.mwam.kafkakewl.domain.*
 import zio.*
 
 class TopologyDeploymentsService private (
   private val persistentStore: PersistentStore,
   private val mutex: Semaphore,
-  private val topologyDeploymentsRef: Ref[Map[TopologyId, TopologyDeployment]]
+  private val topologyDeploymentsRef: Ref[TopologyDeployments]
 ) {
   def deploy(deployments: Deployments): Task[DeploymentsResult] =
     mutex.withPermit {
@@ -50,9 +50,9 @@ object TopologyDeploymentsService {
       for {
         persistentStore <- ZIO.service[PersistentStore]
         // TODO what happens if we fail here?
-        topologyDeployments <- persistentStore.loadAll().orDie
+        topologyDeployments <- persistentStore.loadLatest().orDie
         mutex <- Semaphore.make(permits = 1)
-        topologyDeploymentsRef <- Ref.make(topologyDeployments.map(td => (td.topologyId, td)).toMap)
+        topologyDeploymentsRef <- Ref.make(topologyDeployments)
       } yield TopologyDeploymentsService(persistentStore, mutex, topologyDeploymentsRef)
     }
 }
