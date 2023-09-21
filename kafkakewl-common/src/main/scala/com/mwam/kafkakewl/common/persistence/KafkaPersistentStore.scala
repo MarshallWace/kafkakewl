@@ -24,12 +24,28 @@ import zio.stream.*
 
 import scala.collection.mutable.ListBuffer
 
+final case class BatchMessageEnvelope[Payload](
+  batchSize: Int,
+  indexInBatch: Int,
+  payload: Payload
+)
+
+object BatchMessageEnvelopeJson {
+  import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
+
+  given [Payload](using JsonEncoder[Payload]): JsonEncoder[BatchMessageEnvelope[Payload]] = DeriveJsonEncoder.gen[BatchMessageEnvelope[Payload]]
+  given [Payload](using JsonDecoder[Payload]): JsonDecoder[BatchMessageEnvelope[Payload]] = DeriveJsonDecoder.gen[BatchMessageEnvelope[Payload]]
+}
+
+
 class KafkaPersistentStore(
   kafkaClientConfig: KafkaClientConfig,
   kafkaPersistentStoreConfig: KafkaPersistentStoreConfig,
   kafkaProducer: TransactionalProducer,
   initializedRef: Ref.Synchronized[Boolean]
 ) extends PersistentStore {
+  import BatchMessageEnvelopeJson.given
+
   private object KafkaSerde {
     val key: Serde[Any, TopologyId] =
       Serde.string.inmapM(
@@ -37,9 +53,9 @@ class KafkaPersistentStore(
       )(
         topologyId => ZIO.succeed(topologyId.value)
       )
-    val value: Serde[Any, TopologyDeployment] =
-      Serde.string.inmapM[Any, TopologyDeployment](
-        s => ZIO.fromEither(s.fromJson[TopologyDeployment]).mapError(e => new RuntimeException(e))
+    val value: Serde[Any, BatchMessageEnvelope[TopologyDeployment]] =
+      Serde.string.inmapM[Any, BatchMessageEnvelope[TopologyDeployment]](
+        s => ZIO.fromEither(s.fromJson[BatchMessageEnvelope[TopologyDeployment]]).mapError(e => new RuntimeException(e))
       )(
         td => ZIO.succeed(td.toJson)
       )
@@ -72,9 +88,17 @@ class KafkaPersistentStore(
     initializeIfNeeded *> ZIO.scoped {
       for {
         txn <- kafkaProducer.createTransaction
-        _ <- ZIO.foreachDiscard(topologyDeployments.values) { td =>
+        batchSize = topologyDeployments.size
+        _ <- ZIO.foreachDiscard(topologyDeployments.values.zipWithIndex) { (td, indexInBatch) =>
           for {
-            recordMetadataWithDuration <- txn.produce(topicName, td.topologyId, td, KafkaSerde.key, KafkaSerde.value, offset = None).timed
+            recordMetadataWithDuration <- txn.produce(
+              topicName,
+              td.topologyId,
+              BatchMessageEnvelope(batchSize, indexInBatch, td),
+              KafkaSerde.key,
+              KafkaSerde.value,
+              offset = None
+            ).timed
             (duration, recordMetadata) = recordMetadataWithDuration
             _ <- ZIO.logInfo(s"saved topology ${td.topologyId} into $topicName kafka topic: P#${recordMetadata.partition} @${recordMetadata.offset} in ${duration.toMillis / 1000.0} seconds")
           } yield ()
@@ -165,7 +189,8 @@ class KafkaPersistentStore(
       KafkaConsumerUtils.consumeUntilEnd(consumer, topicPartitions) { _.forEach(cr => messages += (cr.key -> cr.value)) }
 
       messages
-        .map { case (key, value) => (TopologyId(key), value.fromJson[TopologyDeployment]) }
+        // Here we don't care about the message batch, just extract the payload
+        .map { case (key, value) => (TopologyId(key), value.fromJson[BatchMessageEnvelope[TopologyDeployment]].map(_.payload)) }
         .toMap
     }
 
