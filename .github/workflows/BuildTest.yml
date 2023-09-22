@@ -1,8 +1,8 @@
-name: CI
+name: Build, test and package
 on:
   pull_request:
 jobs:
-  test:
+  build-test-package:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
