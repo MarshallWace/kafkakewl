@@ -8,7 +8,7 @@ RUN rm -f /etc/yum.repos.d/bintray-rpm.repo \
  && mv sbt-rpm.repo /etc/yum.repos.d/
 
 # install some packages and sbt
-RUN INSTALL_PKGS="nano curl net-tools sbt-$SBT_VERSION" \
+RUN INSTALL_PKGS="net-tools sbt-$SBT_VERSION" \
  && microdnf install -y $INSTALL_PKGS \
  && rpm -V $INSTALL_PKGS \
  && microdnf clean all -y
