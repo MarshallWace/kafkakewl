@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: Sets the image name
         run: |
-          echo "IMAGE=ghcr.io/marshallwace/kafkakewl-deploy" >> $GITHUB_ENV
+          echo "IMAGE=ghcr.io/marshallwace/kafkakewl" >> $GITHUB_ENV
       - name: Extract the tag version
         if: "startsWith(github.ref, 'refs/tags/v')"
         run: |
