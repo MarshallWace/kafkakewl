@@ -5,36 +5,43 @@ on:
       - 'v*'
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-deploy
+  KAFKAKEWL_DEPLOY_IMAGE_NAME: kafkakewl-deploy
+  KAFKAKEWL_METRICS_IMAGE_NAME: kafkakewl-metrics
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: ${{ env.REGISTRY }}/${{ env.KAFKAKEWL_DEPLOY_IMAGE_NAME }}
+            dockerfile: ./Dockerfile-kafkakewl-deploy
+          - image: ${{ env.REGISTRY }}/${{ env.KAFKAKEWL_METRICS_IMAGE_NAME }}
+            dockerfile: ./Dockerfile-kafkakewl-metrics
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Extracting metadata for the image
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=pr
-            type=semver,pattern={{version}}
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extracting metadata for the image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=ref,event=pr
+            type=semver,pattern={{version}}
       - name: Build and Push tag
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile-kafkakewl-deploy
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
