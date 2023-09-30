@@ -9,9 +9,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: ghcr.io/kafkakewl-deploy
+          - image: ghcr.io/marshallwace/kafkakewl-deploy
             dockerfile: ./Dockerfile-kafkakewl-deploy
-          - image: ghcr.io/kafkakewl-metrics
+          - image: ghcr.io/marshallwace/kafkakewl-metrics
             dockerfile: ./Dockerfile-kafkakewl-metrics
     permissions:
       contents: read
