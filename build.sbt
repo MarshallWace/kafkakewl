@@ -71,7 +71,7 @@ val config = Seq(
 )
 
 val circeYaml = Seq(
-    "io.circe" %% "circe-yaml-v12" % circeYamlVersion
+    "io.circe" %% "circe-yaml" % circeYamlVersion
 )
 
 val kafkaClient = Seq(
@@ -125,7 +125,7 @@ lazy val common = project
     name := "kafkakewl-common",
     headerLicense := license,
     // TODO we need to depend on tapirCore ++ zioHttp only, but tapir is simpler
-    libraryDependencies ++= tapir ++ zio ++ tests ++ telemetry
+    libraryDependencies ++= tapir ++ zio ++ circeYaml ++ tests ++ telemetry
   )
 
 lazy val deploy = project
