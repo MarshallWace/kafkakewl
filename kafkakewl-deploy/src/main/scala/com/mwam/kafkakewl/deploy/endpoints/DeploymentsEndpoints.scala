@@ -6,15 +6,18 @@
 
 package com.mwam.kafkakewl.deploy.endpoints
 
+import com.mwam.kafkakewl.common.http.EndpointUtils.yamlRequestBody
 import com.mwam.kafkakewl.common.http.{EndpointUtils, ErrorResponse}
 import com.mwam.kafkakewl.domain.*
 import com.mwam.kafkakewl.domain.DeploymentsJson.given
 import com.mwam.kafkakewl.domain.DeploymentsSchema.given
+import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
 import sttp.tapir.ztapir.*
-import sttp.tapir.{EndpointOutput, PublicEndpoint}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, EndpointIO, EndpointOutput, FieldName, PublicEndpoint, Schema}
 import zio.*
+import zio.json.{JsonDecoder, JsonEncoder}
 
 class DeploymentsEndpoints() extends EndpointUtils {
   private val deploymentsEndpoint: PublicEndpoint[Unit, Unit, Unit, Any] = apiEndpoint.in("deployments")
@@ -36,11 +39,12 @@ class DeploymentsEndpoints() extends EndpointUtils {
     .out(jsonBody[Seq[TopologyDeployment]])
 
   val postDeploymentsEndpoint: PublicEndpoint[Deployments, Unit, DeploymentsResult, Any] = deploymentsEndpoint
-    .in(jsonBody[Deployments])
+    .in(oneOfBody(jsonBody[Deployments], yamlRequestBody[Deployments]))
     .post
     .out(jsonBody[DeploymentsResult])
 }
 
 object DeploymentsEndpoints {
   val live: ZLayer[Any, Nothing, DeploymentsEndpoints] = ZLayer.succeed(DeploymentsEndpoints())
+
 }

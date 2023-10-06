@@ -34,6 +34,7 @@ val zioConfigVersion = "3.0.7"
 val zioLoggingVersion = "2.1.14"
 val zioKafkaVersion = "2.4.2"
 val zioTelemetryVersion = "3.0.0-RC17"
+val circeYamlVersion = "0.14.2"
 val openTelemetryVersion = "1.29.0"
 val openTelemetryGrpcVersion = "1.47.0"
 val kafkaClientVersion = "3.5.1"
@@ -67,6 +68,10 @@ val config = Seq(
   "dev.zio" %% "zio-config" % zioConfigVersion,
   "dev.zio" %% "zio-config-typesafe" % zioConfigVersion,
   "dev.zio" %% "zio-config-magnolia" % zioConfigVersion
+)
+
+val circeYaml = Seq(
+    "io.circe" %% "circe-yaml" % circeYamlVersion
 )
 
 val kafkaClient = Seq(
@@ -120,7 +125,7 @@ lazy val common = project
     name := "kafkakewl-common",
     headerLicense := license,
     // TODO we need to depend on tapirCore ++ zioHttp only, but tapir is simpler
-    libraryDependencies ++= tapir ++ zio ++ tests ++ telemetry
+    libraryDependencies ++= tapir ++ zio ++ circeYaml ++ tests ++ telemetry
   )
 
 lazy val deploy = project
