@@ -10,5 +10,5 @@ import sttp.tapir.*
 
 object TopologySchema {
   given [T <: StringValue]: Schema[T] = Schema(SchemaType.SString()).validate(Validator.nonEmptyString.contramap(_.value))
-  given topicConfigKeyValueMapSchema: Schema[Map[TopicConfigKey, TopicConfigValue]] = Schema.schemaForMap[TopicConfigKey, TopicConfigValue](_.value)
+  given Schema[Map[TopicConfigKey, TopicConfigValue]] = Schema.schemaForMap[TopicConfigKey, TopicConfigValue](_.value)
 }

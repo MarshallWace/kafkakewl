@@ -6,11 +6,9 @@
 
 package com.mwam.kafkakewl.deploy.endpoints
 
-import com.mwam.kafkakewl.common.http.ErrorResponse
 import com.mwam.kafkakewl.common.telemetry.zServerLogicWithTracing
 import com.mwam.kafkakewl.deploy.services.TopologyDeploymentsService
 import com.mwam.kafkakewl.domain.*
-import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -26,7 +24,7 @@ class DeploymentsServerEndpoints(deploymentsEndpoints: DeploymentsEndpoints,
     deploymentsEndpoints.postDeploymentsEndpoint.zServerLogicWithTracing(postDeployments)
   )
 
-  private def getDeployment(topologyId: TopologyId): ZIO[Any, ErrorResponse, TopologyDeployment] = for {
+  private def getDeployment(topologyId: TopologyId): ZIO[Any, QueryDeploymentsFailure, TopologyDeployment] = for {
     _ <- tracing.addEvent("reading topology from cache")
     _ <- tracing.setAttribute("topology_id", topologyId.value)
     topologyDeployment <- topologyDeploymentsService.getTopologyDeployment(topologyId)
@@ -34,16 +32,14 @@ class DeploymentsServerEndpoints(deploymentsEndpoints: DeploymentsEndpoints,
       case Some(_) => "read topology from cache"
       case None => "topology not found in cache"
     )
-    withErrorType <- ZIO.getOrFailWith(ErrorResponse(s"topology_id=$topologyId not found in cache", StatusCode.NotFound))(topologyDeployment)
-  } yield withErrorType
+    topologyDeployment <- ZIO.getOrFailWith(DeploymentsFailure.notFound(s"topology $topologyId not found"))(topologyDeployment)
+  } yield topologyDeployment
 
-  private def getDeployments(deploymentQuery: TopologyDeploymentQuery): ZIO[Any, Unit, Seq[TopologyDeployment]] =
-  // TODO error handling!
+  private def getDeployments(deploymentQuery: TopologyDeploymentQuery): ZIO[Any, QueryDeploymentsFailure, Seq[TopologyDeployment]] =
     topologyDeploymentsService.getTopologyDeployments(deploymentQuery)
 
-  private def postDeployments(deployments: Deployments): ZIO[Any, Unit, DeploymentsResult] =
-  // TODO error handling!
-    topologyDeploymentsService.deploy(deployments).orDie
+  private def postDeployments(deployments: Deployments): ZIO[Any, PostDeploymentsFailure, DeploymentsSuccess] =
+    topologyDeploymentsService.deploy(deployments)
 }
 
 object DeploymentsServerEndpoints {

@@ -6,11 +6,9 @@
 
 package com.mwam.kafkakewl.metrics.endpoints
 
-import com.mwam.kafkakewl.common.http.ErrorResponse
 import com.mwam.kafkakewl.common.telemetry.zServerLogicWithTracing
-import com.mwam.kafkakewl.metrics.domain.KafkaConsumerGroupInfo
+import com.mwam.kafkakewl.metrics.domain.{Failures, KafkaConsumerGroupInfo, QueryFailure}
 import com.mwam.kafkakewl.metrics.services.KafkaConsumerGroupInfoCache
-import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -25,9 +23,9 @@ class ConsumerGroupServerEndpoints(consumerGroupEndpoints: ConsumerGroupEndpoint
     consumerGroupEndpoints.getGroupEndpoint.zServerLogicWithTracing(group => getConsumerGroup(group)),
   )
 
-  private def getConsumerGroups: ZIO[Any, Unit, Seq[String]] = consumerGroupInfoCache.getConsumerGroups
+  private def getConsumerGroups: ZIO[Any, QueryFailure, Seq[String]] = consumerGroupInfoCache.getConsumerGroups
 
-  private def getConsumerGroup(consumerGroup: String): ZIO[Any, ErrorResponse, KafkaConsumerGroupInfo] = for {
+  private def getConsumerGroup(consumerGroup: String): ZIO[Any, QueryFailure, KafkaConsumerGroupInfo] = for {
     _ <- tracing.addEvent("reading consumer group info from cache")
     _ <- tracing.setAttribute("group", consumerGroup)
     consumerGroupInfo <- consumerGroupInfoCache.getConsumerGroupInfo(consumerGroup)
@@ -35,7 +33,7 @@ class ConsumerGroupServerEndpoints(consumerGroupEndpoints: ConsumerGroupEndpoint
       case Some(_) => "read consumer group info from cache"
       case None => "consumer group not found in cache"
     )
-    withErrorType <- ZIO.getOrFailWith(ErrorResponse(s"consumer group $consumerGroup not found", StatusCode.NotFound))(consumerGroupInfo)
+    withErrorType <- ZIO.getOrFailWith(Failures.notFound(s"consumer group $consumerGroup not found"))(consumerGroupInfo)
   } yield withErrorType
 }
 
