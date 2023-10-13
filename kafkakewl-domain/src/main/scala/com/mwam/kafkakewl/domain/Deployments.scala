@@ -24,8 +24,6 @@ final case class Deployments(
   delete: Seq[TopologyId] = Seq.empty
 )
 
-final case class DeploymentsResult()
-
 final case class TopologyDeploymentQuery(
   topologyIdFilterRegex: Option[String],
   withTopology: Option[Boolean],
@@ -51,3 +49,39 @@ final case class TopologyDeployment(
 )
 
 type TopologyDeployments = Map[TopologyId, TopologyDeployment]
+
+/**
+ * Base trait for failures while querying deployments.
+ */
+sealed trait QueryDeploymentsFailure
+
+/**
+ * Base trait for failures while performing deployments.
+ */
+sealed trait PostDeploymentsFailure
+
+/**
+ * All failures relating to performing/querying deployments.
+ */
+object DeploymentsFailure {
+  final case class NotFound(notFound: Seq[String]) extends QueryDeploymentsFailure
+  final case class Authorization(authorizationFailed: Seq[String]) extends PostDeploymentsFailure with QueryDeploymentsFailure
+  final case class Validation(validationFailed: Seq[String]) extends PostDeploymentsFailure
+  final case class Deployment(deploymentFailed: Seq[String]) extends PostDeploymentsFailure
+  final case class Persistence(persistFailed: Seq[String]) extends PostDeploymentsFailure
+
+  def notFound(notFound: String*): NotFound = NotFound(notFound)
+  def authorization(throwable: Throwable): Authorization = Authorization(errors(throwable))
+  def validation(throwable: Throwable): Validation = Validation(errors(throwable))
+  def deployment(throwable: Throwable): Deployment = Deployment(errors(throwable))
+  def persistence(throwable: Throwable): Persistence = Persistence(errors(throwable))
+
+  private def errors(throwable: Throwable): Seq[String] = Seq(throwable.getMessage)
+}
+
+/**
+ * The result of a successful deployment.
+ *
+ * @param statuses the statuses of the topology deployments.
+ */
+final case class DeploymentsSuccess(statuses: Map[TopologyId, TopologyDeploymentStatus])

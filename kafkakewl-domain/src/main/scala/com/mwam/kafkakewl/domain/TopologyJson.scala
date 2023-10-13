@@ -25,6 +25,7 @@ object TopologyJson {
   given JsonDecoder[TopologyId] = JsonDecoder[String].map(TopologyId.apply)
   given JsonDecoder[Namespace] = JsonDecoder[String].map(Namespace.apply)
   given JsonDecoder[Developer] = JsonDecoder[String].map(Developer.apply)
+  given JsonFieldDecoder[TopologyId] = JsonFieldDecoder[String].map(TopologyId.apply)
 
   // generating JsonEncoders/JsonDecoders for normal domain types
   given JsonEncoder[Topic] = DeriveJsonEncoder.gen[Topic]

@@ -6,11 +6,9 @@
 
 package com.mwam.kafkakewl.metrics.endpoints
 
-import com.mwam.kafkakewl.common.http.ErrorResponse
 import com.mwam.kafkakewl.common.telemetry.zServerLogicWithTracing
-import com.mwam.kafkakewl.metrics.domain.KafkaSingleTopicPartitionInfos
+import com.mwam.kafkakewl.metrics.domain.{Failures, KafkaSingleTopicPartitionInfos, QueryFailure}
 import com.mwam.kafkakewl.metrics.services.KafkaTopicInfoCache
-import sttp.model.StatusCode
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -23,9 +21,9 @@ class TopicServerEndpoints(topicEndpoints: TopicEndpoints, topicService: KafkaTo
     topicEndpoints.getTopicEndpoint.zServerLogicWithTracing(topic => getTopic(topic)),
   )
 
-  private def getTopics: ZIO[Any, Unit, Seq[String]] = topicService.getTopics
+  private def getTopics: ZIO[Any, QueryFailure, Seq[String]] = topicService.getTopics
 
-  private def getTopic(topic: String): ZIO[Any, ErrorResponse, KafkaSingleTopicPartitionInfos] = for {
+  private def getTopic(topic: String): ZIO[Any, QueryFailure, KafkaSingleTopicPartitionInfos] = for {
     _ <- tracing.addEvent("reading topic partition infos from cache")
     _ <- tracing.setAttribute("topic", topic)
     topicPartitionInfos <- topicService.getTopicPartitionInfos(topic)
@@ -33,7 +31,7 @@ class TopicServerEndpoints(topicEndpoints: TopicEndpoints, topicService: KafkaTo
       case Some(_) => "read topic partition infos from cache"
       case None => "topic not found in cache"
     )
-    withErrorType <- ZIO.getOrFailWith(ErrorResponse(s"topic $topic not found", StatusCode.NotFound))(topicPartitionInfos)
+    withErrorType <- ZIO.getOrFailWith(Failures.notFound(s"topic $topic not found"))(topicPartitionInfos)
   } yield withErrorType
 }
 

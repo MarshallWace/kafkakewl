@@ -15,7 +15,7 @@ class TopologyDeploymentsService private (
   private val mutex: Semaphore,
   private val topologyDeploymentsRef: Ref[TopologyDeployments]
 ) {
-  def deploy(deployments: Deployments): Task[DeploymentsResult] =
+  def deploy(deployments: Deployments): IO[PostDeploymentsFailure, DeploymentsSuccess] =
     mutex.withPermit {
       for {
         _ <- ZIO.logInfo(s"deploying $deployments")
@@ -25,13 +25,22 @@ class TopologyDeploymentsService private (
         // TODO persisting the new TopologyDeployments
         // TODO publishing the change-log messages
         // TODO update the in-memory state
+
+        // Just same fake topology deployments for now
         topologyDeployments = deployments.deploy
           .map(t => (t.id, TopologyDeployment(t.id, TopologyDeploymentStatus(), Some(t))))
-          .toMap -- deployments.delete
-        _ <- persistentStore.save(topologyDeployments)
+          .toMap ++ deployments.delete
+            .map(tid => (tid, TopologyDeployment(tid, TopologyDeploymentStatus(), None)))
+            .toMap
+
+        _ <- persistentStore.save(topologyDeployments).logError("saving TopologyDeployments").mapError(DeploymentsFailure.persistence)
         _ <- topologyDeploymentsRef.update { _ ++ topologyDeployments -- deployments.delete }
         _ <- ZIO.logInfo(s"finished deploying $deployments")
-      }  yield DeploymentsResult()
+      } yield DeploymentsSuccess(
+        topologyDeployments
+          .map((tid, td) => (tid, td.status))
+          .toMap
+      )
     }
 
   def getTopologyDeployments(topologyDeploymentQuery: TopologyDeploymentQuery): UIO[Seq[TopologyDeployment]] = for {
