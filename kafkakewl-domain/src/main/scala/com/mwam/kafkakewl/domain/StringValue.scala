@@ -12,4 +12,6 @@ package com.mwam.kafkakewl.domain
 trait StringValue extends Any {
   def value: String
   override def toString: String = value
+
+  def quote: String = s"'$toString'"
 }

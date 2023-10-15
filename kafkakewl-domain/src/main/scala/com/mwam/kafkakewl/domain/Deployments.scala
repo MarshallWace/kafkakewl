@@ -6,6 +6,8 @@
 
 package com.mwam.kafkakewl.domain
 
+import zio.NonEmptyChunk
+
 final case class DeploymentOptions(
   // TODO make allowing unsafe operations more granular if needed
   allowUnsafe: Boolean = false
@@ -72,7 +74,7 @@ object DeploymentsFailure {
 
   def notFound(notFound: String*): NotFound = NotFound(notFound)
   def authorization(throwable: Throwable): Authorization = Authorization(errors(throwable))
-  def validation(throwable: Throwable): Validation = Validation(errors(throwable))
+  def validation(errors: NonEmptyChunk[String]): Validation = Validation(errors)
   def deployment(throwable: Throwable): Deployment = Deployment(errors(throwable))
   def persistence(throwable: Throwable): Persistence = Persistence(errors(throwable))
 
