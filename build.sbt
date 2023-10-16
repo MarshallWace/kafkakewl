@@ -27,6 +27,7 @@ val logbackVersion = "1.4.11"
 val logbackContribJsonVersion = "0.1.5"
 val tapirVersion = "1.7.3"
 val zioVersion = "2.0.16"
+val zioPreludeVersion = "1.0.0-RC21"
 val zioMetricsConnectorsVersion = "2.1.0"
 val tapirZioJsonVersion = "3.9.0"
 val zioJsonVersion = "0.6.1"
@@ -52,6 +53,7 @@ val tapirCore = Seq(
 
 val zio = Seq(
   "dev.zio" %% "zio" % zioVersion,
+  "dev.zio" %% "zio-prelude" % zioPreludeVersion,
   "dev.zio" %% "zio-streams" % zioVersion,
   "dev.zio" %% "zio-metrics-connectors" % zioMetricsConnectorsVersion,
   "dev.zio" %% "zio-metrics-connectors-prometheus" % zioMetricsConnectorsVersion,

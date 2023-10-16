@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.deploy.services
 
 import com.mwam.kafkakewl.common.persistence.PersistentStore
 import com.mwam.kafkakewl.domain.*
+import com.mwam.kafkakewl.domain.validation.TopologyValidation
 import zio.*
 
 class TopologyDeploymentsService private (
@@ -20,7 +21,13 @@ class TopologyDeploymentsService private (
       for {
         _ <- ZIO.logInfo(s"deploying $deployments")
         // TODO authorization
-        // TODO validating the deployments
+
+        // Validation before deployment
+        topologyDeploymentsBefore <- topologyDeploymentsRef.get
+        _ <- TopologyValidation.validate(topologyDeploymentsBefore)(deployments)
+          .toZIOParallelErrors
+          .mapError(DeploymentsFailure.validation)
+
         // TODO performing the kafka deployment itself, returns the new TopologyDeployments
         // TODO persisting the new TopologyDeployments
         // TODO publishing the change-log messages
