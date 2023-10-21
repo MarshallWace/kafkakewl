@@ -52,6 +52,12 @@ final case class TopologyDeployment(
 
 type TopologyDeployments = Map[TopologyId, TopologyDeployment]
 
+extension (topologyDeployments: TopologyDeployments) {
+  def toTopologies: Topologies = topologyDeployments.values
+    .collect { case TopologyDeployment(tid, _, Some(topology)) => (tid, topology) }
+    .toMap
+}
+
 /**
  * Base trait for failures while querying deployments.
  */

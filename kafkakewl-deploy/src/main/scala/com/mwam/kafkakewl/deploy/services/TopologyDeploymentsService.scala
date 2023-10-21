@@ -24,7 +24,7 @@ class TopologyDeploymentsService private (
 
         // Validation before deployment
         topologyDeploymentsBefore <- topologyDeploymentsRef.get
-        _ <- TopologyValidation.validate(topologyDeploymentsBefore)(deployments)
+        _ <- TopologyValidation.validate(topologyDeploymentsBefore.toTopologies, deployments)
           .toZIOParallelErrors
           .mapError(DeploymentsFailure.validation)
 

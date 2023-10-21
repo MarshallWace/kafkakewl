@@ -46,6 +46,4 @@ object TopologyJson {
   given JsonDecoder[Relationship] = DeriveJsonDecoder.gen[Relationship]
   given JsonEncoder[Topology] = DeriveJsonEncoder.gen[Topology]
   given JsonDecoder[Topology] = DeriveJsonDecoder.gen[Topology]
-  given JsonEncoder[TopologyDeployResult] = DeriveJsonEncoder.gen[TopologyDeployResult]
-  given JsonDecoder[TopologyDeployResult] = DeriveJsonDecoder.gen[TopologyDeployResult]
 }
