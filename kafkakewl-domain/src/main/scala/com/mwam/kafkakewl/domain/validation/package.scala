@@ -25,7 +25,8 @@ package object validation {
   private val successValue: Unit = ()
 
   val valid: ValidationFailures = Validation.succeed(successValue)
-  def invalid(validationError: ValidationError): ValidationFailures = Validation.fail(validationError)
+  def invalid(validationError: ValidationError, validationErrors: ValidationError*): ValidationFailures =
+    Validation.failNonEmptyChunk(NonEmptyChunk(validationError, validationErrors: _*))
 
   def validationErrorIf(error: => ValidationError)(predicate: => Boolean): ValidationFailures =
     Validation.fromPredicateWith(error)(successValue)(_ => !predicate)
