@@ -10,7 +10,7 @@ import com.mwam.kafkakewl.common.http.HttpServer
 import com.mwam.kafkakewl.common.persistence.{KafkaPersistentStore, PersistentStore}
 import com.mwam.kafkakewl.common.telemetry.GlobalTracer
 import com.mwam.kafkakewl.deploy.endpoints.*
-import com.mwam.kafkakewl.deploy.services.TopologyDeploymentsService
+import com.mwam.kafkakewl.deploy.services.{TopologyDeploymentsService, TopologyDeploymentsToKafkaService}
 import com.mwam.kafkakewl.domain.config.KafkaClientConfig
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
@@ -71,6 +71,7 @@ object Main extends ZIOAppDefault {
       MetricsConfig.live,
       KafkaPersistentStore.live,
       TopologyDeploymentsService.live,
+      TopologyDeploymentsToKafkaService.live,
       DeploymentsEndpoints.live,
       DeploymentsServerEndpoints.live,
       Endpoints.live,
