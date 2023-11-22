@@ -10,12 +10,12 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
 import zio.*
-import zio.metrics.connectors.prometheus.PrometheusPublisher
+import zio.metrics.connectors.timelessprometheus.TimelessPrometheusPublisher
 
 class Endpoints(
     topicEndpoints: TopicServerEndpoints,
     consumerGroupEndpoints: ConsumerGroupServerEndpoints,
-    prometheusPublisher: PrometheusPublisher
+    prometheusPublisher: TimelessPrometheusPublisher
 ) {
   private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.in("metrics").get.out(stringBody)
@@ -38,7 +38,8 @@ class Endpoints(
 
 object Endpoints {
   val live: ZLayer[
-    TopicServerEndpoints & ConsumerGroupServerEndpoints & PrometheusPublisher,
+    TopicServerEndpoints & ConsumerGroupServerEndpoints &
+      TimelessPrometheusPublisher,
     Nothing,
     Endpoints
   ] = ZLayer.fromFunction(Endpoints(_, _, _))

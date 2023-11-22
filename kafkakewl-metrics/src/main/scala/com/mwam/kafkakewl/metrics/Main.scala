@@ -19,7 +19,7 @@ import zio.*
 import zio.http.Server
 import zio.logging.LogFormat
 import zio.logging.backend.SLF4J
-import zio.metrics.connectors.prometheus
+import zio.metrics.connectors.timelessprometheus
 import zio.metrics.jvm.DefaultJvmMetrics
 import zio.telemetry.opentelemetry.context.ContextStorage
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -86,8 +86,8 @@ object Main extends ZIOAppDefault {
       ConsumerGroupEndpoints.live,
       ConsumerGroupServerEndpoints.live,
       Endpoints.live,
-      prometheus.publisherLayer,
-      prometheus.prometheusLayer,
+      timelessprometheus.publisherLayer,
+      timelessprometheus.prometheusLayer,
       Runtime.enableRuntimeMetrics,
       DefaultJvmMetrics.live.unit,
       HttpServer.live,

@@ -10,20 +10,34 @@ import sttp.tapir.PublicEndpoint
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
 import zio.*
-import zio.metrics.connectors.prometheus.PrometheusPublisher
+import zio.metrics.connectors.timelessprometheus.TimelessPrometheusPublisher
 
 class Endpoints(
     deploymentServerEndpoints: DeploymentsServerEndpoints,
-    prometheusPublisher: PrometheusPublisher
+    prometheusPublisher: TimelessPrometheusPublisher
 ) {
   private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] =
     endpoint.in("metrics").get.out(stringBody)
+
+  // Health check endpoints. As of now, just return 200 no preparation is done
+  // after the HTTP server starts.
+  private val livenessEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
+    infallibleEndpoint.in("health").in("live").get
+  private val readinessEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
+    infallibleEndpoint.in("health").in("ready").get
+  private val startupProbeEndpoint: PublicEndpoint[Unit, Nothing, Unit, Any] =
+    infallibleEndpoint.in("health").in("startup").get
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = {
     val api = deploymentServerEndpoints.endpoints
     val docs = docsEndpoints(api)
     val metrics = List(metricsEndpoint.zServerLogic[Any](_ => getMetrics))
-    api ++ docs ++ metrics
+    val health =
+      List(livenessEndpoint, readinessEndpoint, startupProbeEndpoint)
+        .map(
+          _.zServerLogic[Any](_ => ZIO.succeed(()))
+        )
+    api ++ docs ++ metrics ++ health
   }
 
   private def docsEndpoints(
@@ -33,11 +47,12 @@ class Endpoints(
 
   private def getMetrics: ZIO[Any, Unit, String] =
     prometheusPublisher.get // TODO this adds the timestamp as well which isn't desirable due to prometheus's staleness handling
+
 }
 
 object Endpoints {
   val live: ZLayer[
-    DeploymentsServerEndpoints & PrometheusPublisher,
+    DeploymentsServerEndpoints & TimelessPrometheusPublisher,
     Nothing,
     Endpoints
   ] =
