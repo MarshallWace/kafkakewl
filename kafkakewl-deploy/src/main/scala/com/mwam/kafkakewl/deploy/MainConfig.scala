@@ -16,20 +16,24 @@ import zio.metrics.connectors.MetricsConfig
 import zio.{ZIO, ZLayer}
 
 final case class MainConfig(
-  kafkaCluster: KafkaClusterConfig,
-  http: HttpConfig,
-  kafkaPersistentStore: KafkaPersistentStoreConfig,
-  metrics: MetricsConfig
+    kafkaCluster: KafkaClusterConfig,
+    http: HttpConfig,
+    kafkaPersistentStore: KafkaPersistentStoreConfig,
+    metrics: MetricsConfig
 )
 
 object MainConfig {
   val live: ZLayer[Any, ReadError[String], MainConfig] =
     ZLayer {
-      read(descriptor[MainConfig].from(
-        TypesafeConfigSource.fromTypesafeConfig(
-          TypesafeConfigExtensions.loadWithOverride(".kafkakewl-deploy-config-overrides.conf")
+      read(
+        descriptor[MainConfig].from(
+          TypesafeConfigSource.fromTypesafeConfig(
+            TypesafeConfigExtensions.loadWithOverride(
+              ".kafkakewl-deploy-config-overrides.conf"
+            )
+          )
         )
-      ))
+      )
     }
 }
 

@@ -13,7 +13,8 @@ import scala.collection.immutable.SortedMap
 final case class KafkaTopicPartition(topic: String, partition: Int)
 
 object KafkaTopicPartition {
-  def apply(topicPartition: TopicPartition) = new KafkaTopicPartition(topicPartition.topic, topicPartition.partition)
+  def apply(topicPartition: TopicPartition) =
+    new KafkaTopicPartition(topicPartition.topic, topicPartition.partition)
 }
 
 final case class KafkaTopicPartitionInfo(beginningOffset: Long, endOffset: Long)
@@ -24,51 +25,70 @@ object KafkaSingleTopicPartitionInfos {
   val empty: SortedMap[Int, KafkaTopicPartitionInfo] = SortedMap.empty
 }
 
-type KafkaTopicPartitionInfos = Map[KafkaTopicPartition, KafkaTopicPartitionInfo]
+type KafkaTopicPartitionInfos =
+  Map[KafkaTopicPartition, KafkaTopicPartitionInfo]
 
 object KafkaTopicPartitionInfos {
   val empty: Map[KafkaTopicPartition, KafkaTopicPartitionInfo] = Map.empty
 }
 
 final case class KafkaTopicPartitionInfoChanges(
-  addedOrUpdated: Map[KafkaTopicPartition, KafkaTopicPartitionInfo],
-  removed: Set[KafkaTopicPartition]
+    addedOrUpdated: Map[KafkaTopicPartition, KafkaTopicPartitionInfo],
+    removed: Set[KafkaTopicPartition]
 )
 
 object KafkaTopicPartitionInfoExtensions {
-  extension (topicPartitionInfos: Map[KafkaTopicPartition, KafkaTopicPartitionInfo]) {
-    def diff(newTopicPartitionInfos: Map[KafkaTopicPartition, KafkaTopicPartitionInfo]): KafkaTopicPartitionInfoChanges = {
-      val addedOrUpdated = newTopicPartitionInfos.filter { case (tp, tpi) => !topicPartitionInfos.get(tp).contains(tpi) }
-      val removed = topicPartitionInfos.keySet diff newTopicPartitionInfos.keySet
+  extension (
+      topicPartitionInfos: Map[KafkaTopicPartition, KafkaTopicPartitionInfo]
+  ) {
+    def diff(
+        newTopicPartitionInfos: Map[
+          KafkaTopicPartition,
+          KafkaTopicPartitionInfo
+        ]
+    ): KafkaTopicPartitionInfoChanges = {
+      val addedOrUpdated = newTopicPartitionInfos.filter { case (tp, tpi) =>
+        !topicPartitionInfos.get(tp).contains(tpi)
+      }
+      val removed =
+        topicPartitionInfos.keySet diff newTopicPartitionInfos.keySet
 
       KafkaTopicPartitionInfoChanges(addedOrUpdated, removed)
     }
   }
 
   extension (topicInfos: Map[String, KafkaSingleTopicPartitionInfos]) {
-    def applyChanges(topicInfoChanges: KafkaTopicPartitionInfoChanges): Map[String, KafkaSingleTopicPartitionInfos] = {
+    def applyChanges(
+        topicInfoChanges: KafkaTopicPartitionInfoChanges
+    ): Map[String, KafkaSingleTopicPartitionInfos] = {
       val newTopicInfos = topicInfoChanges.addedOrUpdated
         .groupBy { case (tp, _) => tp.topic }
-        .map { case (topic, topicPartitionInfos) => (
-          topic,
-          SortedMap.from(topicPartitionInfos.map { case (tp, tpi) => (tp.partition, tpi) })
-        ) }
+        .map { case (topic, topicPartitionInfos) =>
+          (
+            topic,
+            SortedMap.from(topicPartitionInfos.map { case (tp, tpi) =>
+              (tp.partition, tpi)
+            })
+          )
+        }
 
       val removedTopicPartitions = topicInfoChanges.removed
         .groupBy(tp => tp.topic)
-        .map { case (topic, topicPartitionInfos) => (topic, topicPartitionInfos.map(_.partition).toSet) }
-
-      (topicInfos.keySet union newTopicInfos.keySet)
-        .map { topic =>
-          (
-            topic,
-            topicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
-              ++ newTopicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
-              -- removedTopicPartitions.getOrElse(topic, Set.empty)
-          )
+        .map { case (topic, topicPartitionInfos) =>
+          (topic, topicPartitionInfos.map(_.partition).toSet)
         }
-        .toMap
+
+      (topicInfos.keySet union newTopicInfos.keySet).map { topic =>
+        (
+          topic,
+          topicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
+            ++ newTopicInfos.getOrElse(
+              topic,
+              KafkaSingleTopicPartitionInfos.empty
+            )
+            -- removedTopicPartitions.getOrElse(topic, Set.empty)
+        )
+      }.toMap
     }
   }
 }
-

@@ -16,20 +16,24 @@ import sttp.tapir.PublicEndpoint
 import zio.*
 
 class ConsumerGroupEndpoints() extends EndpointUtils with EndpointOutputs {
-  private val groupEndpoint: PublicEndpoint[Unit, Unit, Unit, Any] = apiEndpoint.in("group")
+  private val groupEndpoint: PublicEndpoint[Unit, Unit, Unit, Any] =
+    apiEndpoint.in("group")
 
-  val getGroupsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] = groupEndpoint
-    .get
-    .errorOut(queryFailureOutput)
-    .out(jsonBody[Seq[String]])
+  val getGroupsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] =
+    groupEndpoint.get
+      .errorOut(queryFailureOutput)
+      .out(jsonBody[Seq[String]])
 
-  val getGroupEndpoint: PublicEndpoint[String, QueryFailure, KafkaConsumerGroupInfo, Any] = groupEndpoint
-    .in(path[String]("group_name"))
-    .get
-    .errorOut(queryFailureOutput)
-    .out(jsonBody[KafkaConsumerGroupInfo])
+  val getGroupEndpoint
+      : PublicEndpoint[String, QueryFailure, KafkaConsumerGroupInfo, Any] =
+    groupEndpoint
+      .in(path[String]("group_name"))
+      .get
+      .errorOut(queryFailureOutput)
+      .out(jsonBody[KafkaConsumerGroupInfo])
 }
 
 object ConsumerGroupEndpoints {
-  val live: ZLayer[Any, Nothing, ConsumerGroupEndpoints] = ZLayer.succeed(ConsumerGroupEndpoints())
+  val live: ZLayer[Any, Nothing, ConsumerGroupEndpoints] =
+    ZLayer.succeed(ConsumerGroupEndpoints())
 }

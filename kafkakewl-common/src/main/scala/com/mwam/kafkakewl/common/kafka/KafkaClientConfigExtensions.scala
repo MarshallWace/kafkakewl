@@ -18,11 +18,18 @@ object KafkaClientConfigExtensions {
   extension (kafkaClientConfig: KafkaClientConfig) {
     def toProperties: java.util.Properties = {
       val props = new Properties()
-      props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaClientConfig.brokers)
+      props.put(
+        CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG,
+        kafkaClientConfig.brokers
+      )
       props.putAll(kafkaClientConfig.additionalConfig.asJava)
       props
     }
 
-    def toAdminClientSettings: AdminClientSettings = AdminClientSettings(kafkaClientConfig.brokersList, 30.seconds, kafkaClientConfig.additionalConfig)
+    def toAdminClientSettings: AdminClientSettings = AdminClientSettings(
+      kafkaClientConfig.brokersList,
+      30.seconds,
+      kafkaClientConfig.additionalConfig
+    )
   }
 }

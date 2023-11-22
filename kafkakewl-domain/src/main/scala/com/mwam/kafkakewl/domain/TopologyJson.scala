@@ -6,26 +6,42 @@
 
 package com.mwam.kafkakewl.domain
 
-import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder, JsonFieldDecoder, JsonFieldEncoder}
+import zio.json.{
+  DeriveJsonDecoder,
+  DeriveJsonEncoder,
+  JsonDecoder,
+  JsonEncoder,
+  JsonFieldDecoder,
+  JsonFieldEncoder
+}
 
 object TopologyJson {
-  given [T <: StringValue]: JsonEncoder[T] = JsonEncoder[String].contramap(_.value)
-  given [T <: StringValue]: JsonFieldEncoder[T] = JsonFieldEncoder[String].contramap(_.value)
+  given [T <: StringValue]: JsonEncoder[T] =
+    JsonEncoder[String].contramap(_.value)
+  given [T <: StringValue]: JsonFieldEncoder[T] =
+    JsonFieldEncoder[String].contramap(_.value)
 
   // JsonDecoders for StringValues - TODO we can remove this repetitive code using Mirrors
-  given JsonDecoder[TopicConfigValue] = JsonDecoder[String].map(TopicConfigValue.apply)
-  given JsonFieldDecoder[TopicConfigKey] = JsonFieldDecoder[String].map(TopicConfigKey.apply)
+  given JsonDecoder[TopicConfigValue] =
+    JsonDecoder[String].map(TopicConfigValue.apply)
+  given JsonFieldDecoder[TopicConfigKey] =
+    JsonFieldDecoder[String].map(TopicConfigKey.apply)
   given JsonDecoder[TopicId] = JsonDecoder[String].map(TopicId.apply)
-  given JsonDecoder[ApplicationLocalId] = JsonDecoder[String].map(ApplicationLocalId.apply)
+  given JsonDecoder[ApplicationLocalId] =
+    JsonDecoder[String].map(ApplicationLocalId.apply)
   given JsonDecoder[UserId] = JsonDecoder[String].map(UserId.apply)
-  given JsonDecoder[TopicAliasLocalId] = JsonDecoder[String].map(TopicAliasLocalId.apply)
-  given JsonDecoder[ApplicationAliasLocalId] = JsonDecoder[String].map(ApplicationAliasLocalId.apply)
-  given JsonDecoder[ApplicationFlexId] = JsonDecoder[String].map(ApplicationFlexId.apply)
+  given JsonDecoder[TopicAliasLocalId] =
+    JsonDecoder[String].map(TopicAliasLocalId.apply)
+  given JsonDecoder[ApplicationAliasLocalId] =
+    JsonDecoder[String].map(ApplicationAliasLocalId.apply)
+  given JsonDecoder[ApplicationFlexId] =
+    JsonDecoder[String].map(ApplicationFlexId.apply)
   given JsonDecoder[TopicFlexId] = JsonDecoder[String].map(TopicFlexId.apply)
   given JsonDecoder[TopologyId] = JsonDecoder[String].map(TopologyId.apply)
   given JsonDecoder[Namespace] = JsonDecoder[String].map(Namespace.apply)
   given JsonDecoder[Developer] = JsonDecoder[String].map(Developer.apply)
-  given JsonFieldDecoder[TopologyId] = JsonFieldDecoder[String].map(TopologyId.apply)
+  given JsonFieldDecoder[TopologyId] =
+    JsonFieldDecoder[String].map(TopologyId.apply)
 
   // generating JsonEncoders/JsonDecoders for normal domain types
   given JsonEncoder[Topic] = DeriveJsonEncoder.gen[Topic]
@@ -46,6 +62,8 @@ object TopologyJson {
   given JsonDecoder[Relationship] = DeriveJsonDecoder.gen[Relationship]
   given JsonEncoder[Topology] = DeriveJsonEncoder.gen[Topology]
   given JsonDecoder[Topology] = DeriveJsonDecoder.gen[Topology]
-  given JsonEncoder[TopologyDeployResult] = DeriveJsonEncoder.gen[TopologyDeployResult]
-  given JsonDecoder[TopologyDeployResult] = DeriveJsonDecoder.gen[TopologyDeployResult]
+  given JsonEncoder[TopologyDeployResult] =
+    DeriveJsonEncoder.gen[TopologyDeployResult]
+  given JsonDecoder[TopologyDeployResult] =
+    DeriveJsonDecoder.gen[TopologyDeployResult]
 }

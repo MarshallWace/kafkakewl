@@ -13,6 +13,10 @@ import zio.{TaskLayer, ZIO, ZLayer}
 object GlobalTracer {
   val live: TaskLayer[Tracer] =
     ZLayer.fromZIO(
-      ZIO.attempt(AutoConfiguredOpenTelemetrySdk.initialize.getOpenTelemetrySdk.getTracer(getClass.getPackageName))
+      ZIO.attempt(
+        AutoConfiguredOpenTelemetrySdk.initialize.getOpenTelemetrySdk.getTracer(
+          getClass.getPackageName
+        )
+      )
     )
 }

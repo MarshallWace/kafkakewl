@@ -18,14 +18,18 @@ object AdminClientExtensions {
       val topicConfigResource = ConfigResource(ConfigResourceType.Topic, topic)
       for {
         configs <- adminClient.describeConfigs(Seq(topicConfigResource))
-        config <- ZIO.getOrFailWith(new RuntimeException(s"Could not describe config for topic $topic"))(configs.get(topicConfigResource))
+        config <- ZIO.getOrFailWith(
+          new RuntimeException(s"Could not describe config for topic $topic")
+        )(configs.get(topicConfigResource))
       } yield config.entries
     }
 
     def getDynamicTopicConfig(topic: String): Task[Map[String, String]] = for {
       configEntries <- adminClient.getTopicConfigEntries(topic)
     } yield configEntries
-      .filter((_, v) => v.source == ConfigEntry.ConfigSource.DYNAMIC_TOPIC_CONFIG) // Ignoring inherited / default configs
+      .filter((_, v) =>
+        v.source == ConfigEntry.ConfigSource.DYNAMIC_TOPIC_CONFIG
+      ) // Ignoring inherited / default configs
       .map((k, v) => (k, v.value))
   }
 }

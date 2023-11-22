@@ -13,5 +13,6 @@ import sttp.tapir.generic.auto.*
 object DeploymentsSchema {
   given Schema[Deployments] = Schema.derived[Deployments]
   given Schema[TopologyDeployment] = Schema.derived[TopologyDeployment]
-  given Schema[Map[TopologyId, TopologyDeploymentStatus]] = Schema.schemaForMap[TopologyId, TopologyDeploymentStatus](_.value)
+  given Schema[Map[TopologyId, TopologyDeploymentStatus]] =
+    Schema.schemaForMap[TopologyId, TopologyDeploymentStatus](_.value)
 }

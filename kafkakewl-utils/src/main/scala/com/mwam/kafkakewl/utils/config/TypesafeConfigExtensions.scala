@@ -16,7 +16,11 @@ object TypesafeConfigExtensions {
     for {
       file <- ZIO.attempt(new File(overrideFilePath))
       defaultConfig <- ZIO.attempt(ConfigFactory.load())
-      overrideConfig <- if (file.exists()) ZIO.attempt(ConfigFactory.parseFile(file)) else ZIO.succeed(ConfigFactory.empty)
-      mergedConfig <- ZIO.attempt(overrideConfig.withFallback(defaultConfig).resolve)
+      overrideConfig <-
+        if (file.exists()) ZIO.attempt(ConfigFactory.parseFile(file))
+        else ZIO.succeed(ConfigFactory.empty)
+      mergedConfig <- ZIO.attempt(
+        overrideConfig.withFallback(defaultConfig).resolve
+      )
     } yield mergedConfig
 }

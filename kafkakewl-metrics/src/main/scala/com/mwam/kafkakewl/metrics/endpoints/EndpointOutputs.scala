@@ -15,8 +15,15 @@ import sttp.tapir.json.zio.*
 import sttp.tapir.ztapir.*
 
 trait EndpointOutputs {
-  val queryFailureOutput: EndpointOutput.OneOf[QueryFailure, QueryFailure] = oneOf[QueryFailure](
-    oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[Failures.NotFound])),
-    oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[Failures.Authorization]))
-  )
+  val queryFailureOutput: EndpointOutput.OneOf[QueryFailure, QueryFailure] =
+    oneOf[QueryFailure](
+      oneOfVariant(
+        statusCode(StatusCode.NotFound).and(jsonBody[Failures.NotFound])
+      ),
+      oneOfVariant(
+        statusCode(StatusCode.Unauthorized).and(
+          jsonBody[Failures.Authorization]
+        )
+      )
+    )
 }

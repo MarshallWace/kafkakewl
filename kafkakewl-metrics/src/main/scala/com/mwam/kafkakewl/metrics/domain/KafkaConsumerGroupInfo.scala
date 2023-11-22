@@ -9,32 +9,39 @@ package com.mwam.kafkakewl.metrics.domain
 import scala.collection.immutable.SortedMap
 
 final case class KafkaConsumerGroupInfo(
-  topics: Map[String, SortedMap[Int, KafkaConsumerGroupOffset]]
+    topics: Map[String, SortedMap[Int, KafkaConsumerGroupOffset]]
 )
 
-object KafkaConsumerGroupInfo
-{
+object KafkaConsumerGroupInfo {
   val empty: KafkaConsumerGroupInfo = KafkaConsumerGroupInfo(Map.empty)
 }
 
 object KafkaConsumerGroupInfoExtensions {
   extension (consumerGroupInfos: Map[String, KafkaConsumerGroupInfo]) {
-    def applyChanges(consumerGroupOffsets: KafkaConsumerGroupOffsets): Map[String, KafkaConsumerGroupInfo] = {
+    def applyChanges(
+        consumerGroupOffsets: KafkaConsumerGroupOffsets
+    ): Map[String, KafkaConsumerGroupInfo] = {
       // TODO may not be very efficient, but works.
-      consumerGroupOffsets.foldLeft(consumerGroupInfos) { case (newConsumerGroupInfos, (cgtp, cgo)) =>
-        val group = cgtp.group
-        val topic = cgtp.topicPartition.topic
-        val partition = cgtp.topicPartition.partition
+      consumerGroupOffsets.foldLeft(consumerGroupInfos) {
+        case (newConsumerGroupInfos, (cgtp, cgo)) =>
+          val group = cgtp.group
+          val topic = cgtp.topicPartition.topic
+          val partition = cgtp.topicPartition.partition
 
-        val currentConsumerGroupInfo = consumerGroupInfos.getOrElse(group, KafkaConsumerGroupInfo.empty)
-        val currentConsumerGroupTopic = currentConsumerGroupInfo.topics.getOrElse(topic, SortedMap.empty[Int, KafkaConsumerGroupOffset])
+          val currentConsumerGroupInfo =
+            consumerGroupInfos.getOrElse(group, KafkaConsumerGroupInfo.empty)
+          val currentConsumerGroupTopic = currentConsumerGroupInfo.topics
+            .getOrElse(topic, SortedMap.empty[Int, KafkaConsumerGroupOffset])
 
-        val newConsumerGroupTopic = cgo match {
-          case Some(consumerGroupOffset) => currentConsumerGroupTopic + (partition -> consumerGroupOffset)
-          case None => currentConsumerGroupTopic - partition
-        }
-        val newConsumerGroupInfo = KafkaConsumerGroupInfo(currentConsumerGroupInfo.topics + (topic -> newConsumerGroupTopic))
-        newConsumerGroupInfos + (cgtp.group -> newConsumerGroupInfo)
+          val newConsumerGroupTopic = cgo match {
+            case Some(consumerGroupOffset) =>
+              currentConsumerGroupTopic + (partition -> consumerGroupOffset)
+            case None => currentConsumerGroupTopic - partition
+          }
+          val newConsumerGroupInfo = KafkaConsumerGroupInfo(
+            currentConsumerGroupInfo.topics + (topic -> newConsumerGroupTopic)
+          )
+          newConsumerGroupInfos + (cgtp.group -> newConsumerGroupInfo)
       }
     }
   }

@@ -6,14 +6,23 @@
 
 package com.mwam.kafkakewl.domain.validation
 
-import com.mwam.kafkakewl.domain.{Deployments, Namespace, Topology, TopologyDeployments, TopologyId}
+import com.mwam.kafkakewl.domain.{
+  Deployments,
+  Namespace,
+  Topology,
+  TopologyDeployments,
+  TopologyId
+}
 
 import scala.util.matching.Regex
 
 object TopologyValidation {
-  private val namespaceRegex: Regex = """^[a-zA-Z0-9\-_]+(\.([a-zA-Z0-9\-_]+))*$""".r
+  private val namespaceRegex: Regex =
+    """^[a-zA-Z0-9\-_]+(\.([a-zA-Z0-9\-_]+))*$""".r
 
-  def validate(topologyDeploymentsBefore: TopologyDeployments)(deployments: Deployments): ValidationFailures = {
+  def validate(
+      topologyDeploymentsBefore: TopologyDeployments
+  )(deployments: Deployments): ValidationFailures = {
     deployments.deploy.map(validate).combine
     // TODO validate topologies and removed topologies together with topologyDeploymentsBefore (via relationships)
   }
@@ -23,8 +32,12 @@ object TopologyValidation {
   }
 
   def validateNamespace(namespace: Namespace): ValidationFailures = {
-    validationErrorIf(s"namespace ${namespace.quote} must not start or end with '.', '_', '_' and can contain only alphanumeric characters and '.', '-', '_'") {
-      namespace.value != "" && namespaceRegex.findFirstIn(namespace.value).isEmpty
+    validationErrorIf(
+      s"namespace ${namespace.quote} must not start or end with '.', '_', '_' and can contain only alphanumeric characters and '.', '-', '_'"
+    ) {
+      namespace.value != "" && namespaceRegex
+        .findFirstIn(namespace.value)
+        .isEmpty
     }
   }
 

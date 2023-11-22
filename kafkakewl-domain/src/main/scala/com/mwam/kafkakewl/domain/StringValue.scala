@@ -6,9 +6,8 @@
 
 package com.mwam.kafkakewl.domain
 
-/**
- * A universal trait for value classes wrapping strings.
- */
+/** A universal trait for value classes wrapping strings.
+  */
 trait StringValue extends Any {
   def value: String
   override def toString: String = value
