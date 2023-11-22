@@ -30,7 +30,7 @@ class Endpoints(
     .fromServerEndpoints[Task](apiEndpoints, "kafkakewl-metrics", "1.0.0")
 
   private def getMetrics: ZIO[Any, Unit, String] =
-    prometheusPublisher.get // TODO this adds the timestamp as well which isn't desirable due to prometheus's staleness handling
+    prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
 }
 
 object Endpoints {
