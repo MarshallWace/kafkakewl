@@ -20,4 +20,12 @@ object CollectionExtensions {
         .toMap
     }
   }
+
+  extension [A](collection: Iterable[A]) {
+    def duplicatesBy[K](f: A => K): Iterable[K] = collection
+      .groupBy(f)
+      .collect { case (key, g) if g.size > 1 => key }
+
+    def duplicates: Iterable[A] = collection.duplicatesBy(identity)
+  }
 }

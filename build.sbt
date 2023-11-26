@@ -59,6 +59,8 @@ val zio = Seq(
   "dev.zio" %% "zio-metrics-connectors-prometheus" % zioMetricsConnectorsVersion,
   "dev.zio" %% "zio-test" % zioVersion % Test,
   "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+  "dev.zio" %% "zio-test-magnolia" % zioVersion % Test,
+  "dev.zio" %% "zio-test-junit" % zioVersion % Test,
   "dev.zio" %% "zio-json" % zioJsonVersion,
   "dev.zio" %% "zio-logging" % zioLoggingVersion,
   "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,

@@ -8,7 +8,7 @@ package com.mwam.kafkakewl.deploy.services
 
 import com.mwam.kafkakewl.common.persistence.PersistentStore
 import com.mwam.kafkakewl.domain.*
-import com.mwam.kafkakewl.domain.validation.TopologyValidation
+import com.mwam.kafkakewl.domain.validation.*
 import zio.*
 
 class TopologyDeploymentsService private (
@@ -24,7 +24,7 @@ class TopologyDeploymentsService private (
 
         // Validation before deployment
         topologyDeploymentsBefore <- topologyDeploymentsRef.get
-        _ <- TopologyValidation.validate(topologyDeploymentsBefore)(deployments)
+        _ <- DeploymentsValidation.validate(topologyDeploymentsBefore.toTopologies, deployments)
           .toZIOParallelErrors
           .mapError(DeploymentsFailure.validation)
 

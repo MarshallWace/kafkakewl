@@ -86,4 +86,8 @@ final case class Topology(
   relationships: Seq[Relationship] = Seq.empty
 )
 
-final case class TopologyDeployResult(status: String)
+type Topologies = Map[TopologyId, Topology]
+
+extension (topologies: Seq[Topology]) {
+  def toMapById: Topologies = topologies.map(topology => (topology.id, topology)).toMap
+}
