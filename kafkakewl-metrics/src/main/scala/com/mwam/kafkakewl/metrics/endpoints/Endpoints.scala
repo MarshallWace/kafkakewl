@@ -29,6 +29,7 @@ class Endpoints(
   private def docsEndpoints(apiEndpoints: List[ZServerEndpoint[Any, Any]]): List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter()
     .fromServerEndpoints[Task](apiEndpoints, "kafkakewl-metrics", "1.0.0")
 
+  // Regex to remove timestamp from the end of each metric. This is to fix the staleness issue in prometheus.
   private def getMetrics: ZIO[Any, Unit, String] =
     prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
 }
