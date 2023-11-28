@@ -9,68 +9,67 @@ package com.mwam.kafkakewl.domain
 import zio.NonEmptyChunk
 
 final case class DeploymentOptions(
-  // TODO make allowing unsafe operations more granular if needed
-  allowUnsafe: Boolean = false
+    // TODO make allowing unsafe operations more granular if needed
+    allowUnsafe: Boolean = false
 )
 
-/**
- * A deployment to be done, contains options, topologies to be deployed and topology-ids to be removed.
- *
- * @param options the deployment options
- * @param deploy the topologies to deploy
- * @param delete the topology-ids to remove
- */
+/** A deployment to be done, contains options, topologies to be deployed and topology-ids to be removed.
+  *
+  * @param options
+  *   the deployment options
+  * @param deploy
+  *   the topologies to deploy
+  * @param delete
+  *   the topology-ids to remove
+  */
 final case class Deployments(
-  options: DeploymentOptions = DeploymentOptions(),
-  deploy: Seq[Topology] = Seq.empty,
-  delete: Seq[TopologyId] = Seq.empty
+    options: DeploymentOptions = DeploymentOptions(),
+    deploy: Seq[Topology] = Seq.empty,
+    delete: Seq[TopologyId] = Seq.empty
 )
 
 final case class TopologyDeploymentQuery(
-  topologyIdFilterRegex: Option[String],
-  withTopology: Option[Boolean],
-  offset: Option[Int],
-  limit: Option[Int]
+    topologyIdFilterRegex: Option[String],
+    withTopology: Option[Boolean],
+    offset: Option[Int],
+    limit: Option[Int]
 )
 
 final case class TopologyDeploymentStatus(
-  // TODO
+    // TODO
 )
 
-/**
- * The deployment of a topology
- *
- * @param topologyId the topology id
- * @param status the deployment status
- * @param topology the optional topology, none means the topology is removed
- */
+/** The deployment of a topology
+  *
+  * @param topologyId
+  *   the topology id
+  * @param status
+  *   the deployment status
+  * @param topology
+  *   the optional topology, none means the topology is removed
+  */
 final case class TopologyDeployment(
-  topologyId: TopologyId,
-  status: TopologyDeploymentStatus,
-  topology: Option[Topology]
+    topologyId: TopologyId,
+    status: TopologyDeploymentStatus,
+    topology: Option[Topology]
 )
 
 type TopologyDeployments = Map[TopologyId, TopologyDeployment]
 
 extension (topologyDeployments: TopologyDeployments) {
-  def toTopologies: Topologies = topologyDeployments.values
-    .collect { case TopologyDeployment(tid, _, Some(topology)) => (tid, topology) }
-    .toMap
+  def toTopologies: Topologies = topologyDeployments.values.collect { case TopologyDeployment(tid, _, Some(topology)) => (tid, topology) }.toMap
 }
 
-/**
- * Base trait for failures while querying deployments.
- */
+/** Base trait for failures while querying deployments.
+  */
 sealed trait QueryDeploymentsFailure
 
-/**
- * Base trait for failures while performing deployments.
- */
+/** Base trait for failures while performing deployments.
+  */
 sealed trait PostDeploymentsFailure
 
-/**
- * All failures relating to performing/querying deployments.
- */
+/** All failures relating to performing/querying deployments.
+  */
 object DeploymentsFailure {
   final case class NotFound(notFound: Seq[String]) extends QueryDeploymentsFailure
   final case class Authorization(authorizationFailed: Seq[String]) extends PostDeploymentsFailure with QueryDeploymentsFailure
@@ -87,9 +86,9 @@ object DeploymentsFailure {
   private def errors(throwable: Throwable): Seq[String] = Seq(throwable.getMessage)
 }
 
-/**
- * The result of a successful deployment.
- *
- * @param statuses the statuses of the topology deployments.
- */
+/** The result of a successful deployment.
+  *
+  * @param statuses
+  *   the statuses of the topology deployments.
+  */
 final case class DeploymentsSuccess(statuses: Map[TopologyId, TopologyDeploymentStatus])

@@ -13,5 +13,6 @@ import scala.collection.immutable.SortedMap
 
 object KafkaTopicPartitionInfoSchema {
   // TODO hmmm... this looks nasty, any better way of doing this?
-  given Schema[KafkaSingleTopicPartitionInfos] = Schema.schemaForMap[Int, KafkaTopicPartitionInfo](_.toString).map(a => Some(SortedMap.from(a)))(_.toMap)
+  given Schema[KafkaSingleTopicPartitionInfos] =
+    Schema.schemaForMap[Int, KafkaTopicPartitionInfo](_.toString).map(a => Some(SortedMap.from(a)))(_.toMap)
 }

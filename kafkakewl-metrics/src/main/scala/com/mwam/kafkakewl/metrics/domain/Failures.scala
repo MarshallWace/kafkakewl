@@ -6,9 +6,8 @@
 
 package com.mwam.kafkakewl.metrics.domain
 
-/**
- * Base trait for failures while querying something.
- */
+/** Base trait for failures while querying something.
+  */
 sealed trait QueryFailure
 
 object Failures {

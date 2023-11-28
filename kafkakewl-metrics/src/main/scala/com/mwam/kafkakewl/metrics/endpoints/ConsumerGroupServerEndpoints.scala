@@ -13,14 +13,16 @@ import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
 
-class ConsumerGroupServerEndpoints(consumerGroupEndpoints: ConsumerGroupEndpoints,
-                                   consumerGroupInfoCache: KafkaConsumerGroupInfoCache,
-                                   tracing: Tracing) {
+class ConsumerGroupServerEndpoints(
+    consumerGroupEndpoints: ConsumerGroupEndpoints,
+    consumerGroupInfoCache: KafkaConsumerGroupInfoCache,
+    tracing: Tracing
+) {
   given Tracing = tracing
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     consumerGroupEndpoints.getGroupsEndpoint.zServerLogicWithTracing(_ => getConsumerGroups),
-    consumerGroupEndpoints.getGroupEndpoint.zServerLogicWithTracing(group => getConsumerGroup(group)),
+    consumerGroupEndpoints.getGroupEndpoint.zServerLogicWithTracing(group => getConsumerGroup(group))
   )
 
   private def getConsumerGroups: ZIO[Any, QueryFailure, Seq[String]] = consumerGroupInfoCache.getConsumerGroups
@@ -31,7 +33,7 @@ class ConsumerGroupServerEndpoints(consumerGroupEndpoints: ConsumerGroupEndpoint
     consumerGroupInfo <- consumerGroupInfoCache.getConsumerGroupInfo(consumerGroup)
     _ <- tracing.addEvent(consumerGroupInfo match
       case Some(_) => "read consumer group info from cache"
-      case None => "consumer group not found in cache"
+      case None    => "consumer group not found in cache"
     )
     withErrorType <- ZIO.getOrFailWith(Failures.notFound(s"consumer group $consumerGroup not found"))(consumerGroupInfo)
   } yield withErrorType

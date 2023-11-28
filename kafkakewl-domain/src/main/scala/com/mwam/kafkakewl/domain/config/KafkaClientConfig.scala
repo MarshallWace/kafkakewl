@@ -9,8 +9,8 @@ package com.mwam.kafkakewl.domain.config
 import zio.{ZIO, ZLayer}
 
 final case class KafkaClientConfig(
-  brokers: String,
-  additionalConfig: Map[String, String]
+    brokers: String,
+    additionalConfig: Map[String, String]
 ) {
   lazy val brokersList: List[String] = brokers.split(',').map(_.trim).filter(_.nonEmpty).toList
 }

@@ -18,8 +18,7 @@ import zio.*
 class TopicEndpoints() extends EndpointUtils with EndpointOutputs {
   private val topicEndpoint = apiEndpoint.in("topic")
 
-  val getTopicsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] = topicEndpoint
-    .get
+  val getTopicsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] = topicEndpoint.get
     .errorOut(queryFailureOutput)
     .out(jsonBody[Seq[String]])
 

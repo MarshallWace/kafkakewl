@@ -7,5 +7,5 @@
 package com.mwam.kafkakewl.domain.config
 
 final case class HttpConfig(
-  port: Int = 8080
+    port: Int = 8080
 )

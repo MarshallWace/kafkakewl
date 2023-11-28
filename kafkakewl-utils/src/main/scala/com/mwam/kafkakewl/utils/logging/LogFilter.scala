@@ -18,11 +18,13 @@ class LogFilter extends TurboFilter {
         // offset commit failed can be info
         logger.info(marker, format, params)
         FilterReply.DENY
-      case (Level.WARN, "org.apache.kafka.clients.admin.AdminClientConfig" | "org.apache.kafka.clients.consumer.ConsumerConfig") if format.contains("supplied but isn't a known config.") =>
+      case (Level.WARN, "org.apache.kafka.clients.admin.AdminClientConfig" | "org.apache.kafka.clients.consumer.ConsumerConfig")
+          if format.contains("supplied but isn't a known config.") =>
         // "The configuration 'sasl.kerberos.kinit.cmd' was supplied but isn't a known config." can be info
         logger.info(marker, format, params)
         FilterReply.DENY
-      case (Level.WARN, "org.apache.kafka.common.security.kerberos.KerberosLogin") if format.contains("TGT renewal thread has been interrupted and will exit") =>
+      case (Level.WARN, "org.apache.kafka.common.security.kerberos.KerberosLogin")
+          if format.contains("TGT renewal thread has been interrupted and will exit") =>
         // TGT renewal can be info
         logger.info(marker, format, params)
         FilterReply.DENY

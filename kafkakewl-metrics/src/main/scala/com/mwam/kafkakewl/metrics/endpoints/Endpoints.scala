@@ -13,9 +13,9 @@ import zio.*
 import zio.metrics.connectors.prometheus.PrometheusPublisher
 
 class Endpoints(
-  topicEndpoints: TopicServerEndpoints,
-  consumerGroupEndpoints: ConsumerGroupServerEndpoints,
-  prometheusPublisher: PrometheusPublisher
+    topicEndpoints: TopicServerEndpoints,
+    consumerGroupEndpoints: ConsumerGroupServerEndpoints,
+    prometheusPublisher: PrometheusPublisher
 ) {
   private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] = endpoint.in("metrics").get.out(stringBody)
 
@@ -29,9 +29,11 @@ class Endpoints(
   private def docsEndpoints(apiEndpoints: List[ZServerEndpoint[Any, Any]]): List[ZServerEndpoint[Any, Any]] = SwaggerInterpreter()
     .fromServerEndpoints[Task](apiEndpoints, "kafkakewl-metrics", "1.0.0")
 
-  private def getMetrics: ZIO[Any, Unit, String] = prometheusPublisher.get // TODO this adds the timestamp as well which isn't desirable due to prometheus's staleness handling
+  private def getMetrics: ZIO[Any, Unit, String] =
+    prometheusPublisher.get // TODO this adds the timestamp as well which isn't desirable due to prometheus's staleness handling
 }
 
 object Endpoints {
-  val live: ZLayer[TopicServerEndpoints & ConsumerGroupServerEndpoints & PrometheusPublisher, Nothing, Endpoints] = ZLayer.fromFunction(Endpoints(_, _, _))
+  val live: ZLayer[TopicServerEndpoints & ConsumerGroupServerEndpoints & PrometheusPublisher, Nothing, Endpoints] =
+    ZLayer.fromFunction(Endpoints(_, _, _))
 }

@@ -14,12 +14,10 @@ import scala.annotation.targetName
 package object validation {
   type ValidationError = String
 
-  /**
-   * The validation does not produce anything, because the input is already a domain object that we're checking
-   * whether it's valid or not.
-   *
-   * TODO Maybe an abuse of the Validation[E, A] type? Ultimately all we need is a list of errors, when empty it means no errors.
-   */
+  /** The validation does not produce anything, because the input is already a domain object that we're checking whether it's valid or not.
+    *
+    * TODO Maybe an abuse of the Validation[E, A] type? Ultimately all we need is a list of errors, when empty it means no errors.
+    */
   type ValidationFailures = Validation[ValidationError, Unit]
 
   private val successValue: Unit = ()
@@ -36,7 +34,7 @@ package object validation {
 
   extension (validationFailures: ValidationFailures) {
     @targetName("add")
-    def + (other: ValidationFailures): ValidationFailures = combine(validationFailures, other)
+    def +(other: ValidationFailures): ValidationFailures = combine(validationFailures, other)
   }
 
   extension (validationFailures: Iterable[ValidationFailures]) {
