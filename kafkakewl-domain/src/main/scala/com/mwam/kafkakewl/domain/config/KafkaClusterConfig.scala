@@ -7,5 +7,5 @@
 package com.mwam.kafkakewl.domain.config
 
 final case class KafkaClusterConfig(
-  client: KafkaClientConfig
+    client: KafkaClientConfig
 )

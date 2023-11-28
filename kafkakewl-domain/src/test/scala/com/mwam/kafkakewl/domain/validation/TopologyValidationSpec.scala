@@ -26,7 +26,7 @@ object TopologyValidationSpec extends ZIOSpecDefault {
           emptyTopology(namespace = "project"),
           emptyTopology(namespace = "project.package"),
           emptyTopology(namespace = "project.package.sub-package-1"),
-          emptyTopology(namespace = "project.package.sub-package-1__some-suffix123456789"),
+          emptyTopology(namespace = "project.package.sub-package-1__some-suffix123456789")
         )
         check(Gen.fromIterable(topologies)) { topology =>
           assert(validateTopology(topology))(validAssertion)
@@ -44,7 +44,11 @@ object TopologyValidationSpec extends ZIOSpecDefault {
           emptyTopology(namespace = "project\\")
         )
         check(Gen.fromIterable(topologies)) { topology =>
-          assert(validateTopology(topology))(invalidAssertion(s"namespace '${topology.namespace}' must not start or end with '.' and can contain only alphanumeric characters and '.', '-', '_'"))
+          assert(validateTopology(topology))(
+            invalidAssertion(
+              s"namespace '${topology.namespace}' must not start or end with '.' and can contain only alphanumeric characters and '.', '-', '_'"
+            )
+          )
         }
       }
     ),

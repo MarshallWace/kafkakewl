@@ -12,9 +12,9 @@ import com.mwam.kafkakewl.domain.validation.*
 import zio.*
 
 class TopologyDeploymentsService private (
-  private val persistentStore: PersistentStore,
-  private val mutex: Semaphore,
-  private val topologyDeploymentsRef: Ref[TopologyDeployments]
+    private val persistentStore: PersistentStore,
+    private val mutex: Semaphore,
+    private val topologyDeploymentsRef: Ref[TopologyDeployments]
 ) {
   def deploy(deployments: Deployments): IO[PostDeploymentsFailure, DeploymentsSuccess] =
     mutex.withPermit {
@@ -24,7 +24,8 @@ class TopologyDeploymentsService private (
 
         // Validation before deployment
         topologyDeploymentsBefore <- topologyDeploymentsRef.get
-        _ <- DeploymentsValidation.validate(topologyDeploymentsBefore.toTopologies, deployments)
+        _ <- DeploymentsValidation
+          .validate(topologyDeploymentsBefore.toTopologies, deployments)
           .toZIOParallelErrors
           .mapError(DeploymentsFailure.validation)
 
@@ -37,8 +38,8 @@ class TopologyDeploymentsService private (
         topologyDeployments = deployments.deploy
           .map(t => (t.id, TopologyDeployment(t.id, TopologyDeploymentStatus(), Some(t))))
           .toMap ++ deployments.delete
-            .map(tid => (tid, TopologyDeployment(tid, TopologyDeploymentStatus(), None)))
-            .toMap
+          .map(tid => (tid, TopologyDeployment(tid, TopologyDeploymentStatus(), None)))
+          .toMap
 
         _ <- persistentStore.save(topologyDeployments).logError("saving TopologyDeployments").mapError(DeploymentsFailure.persistence)
         _ <- topologyDeploymentsRef.update { _ ++ topologyDeployments -- deployments.delete }

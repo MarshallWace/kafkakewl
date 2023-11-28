@@ -11,7 +11,7 @@ import com.mwam.kafkakewl.metrics.domain.{KafkaConsumerGroupInfo, KafkaConsumerG
 import zio.*
 
 class KafkaConsumerGroupInfoCache(
-  private val consumerGroupInfosRef: Ref[Map[String, KafkaConsumerGroupInfo]]
+    private val consumerGroupInfosRef: Ref[Map[String, KafkaConsumerGroupInfo]]
 ) {
   def getConsumerGroups: UIO[Seq[String]] = consumerGroupInfosRef.get.map(_.keys.toSeq.sorted)
   def getConsumerGroupInfo(consumerGroup: String): UIO[Option[KafkaConsumerGroupInfo]] = consumerGroupInfosRef.get.map(_.get(consumerGroup))
@@ -29,11 +29,11 @@ object KafkaConsumerGroupInfoCache {
     }
 
   private def processConsumerGroupOffsets(
-    consumerGroupOffsetsDequeue: Dequeue[KafkaConsumerGroupOffsets],
-    consumerGroupInfosRef: Ref[Map[String, KafkaConsumerGroupInfo]]
+      consumerGroupOffsetsDequeue: Dequeue[KafkaConsumerGroupOffsets],
+      consumerGroupInfosRef: Ref[Map[String, KafkaConsumerGroupInfo]]
   ) = for {
-      consumerGroupOffsets <- consumerGroupOffsetsDequeue.take
-      _ <- consumerGroupInfosRef.update(_.applyChanges(consumerGroupOffsets))
-      _ <- ZIO.logInfo(s"applied ${consumerGroupOffsets.size} consumer group topic partition offsets")
-    } yield ()
+    consumerGroupOffsets <- consumerGroupOffsetsDequeue.take
+    _ <- consumerGroupInfosRef.update(_.applyChanges(consumerGroupOffsets))
+    _ <- ZIO.logInfo(s"applied ${consumerGroupOffsets.size} consumer group topic partition offsets")
+  } yield ()
 }

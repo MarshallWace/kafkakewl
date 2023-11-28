@@ -18,8 +18,7 @@ import zio.*
 class ConsumerGroupEndpoints() extends EndpointUtils with EndpointOutputs {
   private val groupEndpoint: PublicEndpoint[Unit, Unit, Unit, Any] = apiEndpoint.in("group")
 
-  val getGroupsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] = groupEndpoint
-    .get
+  val getGroupsEndpoint: PublicEndpoint[Unit, QueryFailure, Seq[String], Any] = groupEndpoint.get
     .errorOut(queryFailureOutput)
     .out(jsonBody[Seq[String]])
 

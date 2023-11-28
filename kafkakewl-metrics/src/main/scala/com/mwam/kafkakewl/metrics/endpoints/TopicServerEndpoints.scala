@@ -18,7 +18,7 @@ class TopicServerEndpoints(topicEndpoints: TopicEndpoints, topicService: KafkaTo
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     topicEndpoints.getTopicsEndpoint.zServerLogicWithTracing(_ => getTopics),
-    topicEndpoints.getTopicEndpoint.zServerLogicWithTracing(topic => getTopic(topic)),
+    topicEndpoints.getTopicEndpoint.zServerLogicWithTracing(topic => getTopic(topic))
   )
 
   private def getTopics: ZIO[Any, QueryFailure, Seq[String]] = topicService.getTopics
@@ -29,7 +29,7 @@ class TopicServerEndpoints(topicEndpoints: TopicEndpoints, topicService: KafkaTo
     topicPartitionInfos <- topicService.getTopicPartitionInfos(topic)
     _ <- tracing.addEvent(topicPartitionInfos match
       case Some(_) => "read topic partition infos from cache"
-      case None => "topic not found in cache"
+      case None    => "topic not found in cache"
     )
     withErrorType <- ZIO.getOrFailWith(Failures.notFound(s"topic $topic not found"))(topicPartitionInfos)
   } yield withErrorType

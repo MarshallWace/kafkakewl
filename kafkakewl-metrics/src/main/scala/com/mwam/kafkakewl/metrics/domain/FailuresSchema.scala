@@ -6,5 +6,4 @@
 
 package com.mwam.kafkakewl.metrics.domain
 
-object FailuresSchema {
-}
+object FailuresSchema {}

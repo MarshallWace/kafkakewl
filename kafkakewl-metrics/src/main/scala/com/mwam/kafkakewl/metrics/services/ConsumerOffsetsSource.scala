@@ -4,14 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- *
- * Some of the decoding logic originates from
- * - https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go
- * - https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala
- * (converted to scala)
- *
- */
+/** Some of the decoding logic originates from
+  *   - https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go
+  *   - https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala (converted to scala)
+  */
 
 package com.mwam.kafkakewl.metrics.services
 
@@ -39,11 +35,11 @@ object ConsumerOffsetsDeserializers {
   import java.util
 
   implicit class ByteBufferExtensions(bb: ByteBuffer) {
-    /**
-     * Reads a length-prefixed string from the byte-buffer. If the 16 bit length is -1 (0xFFFF) it considers it an empty string.
-     *
-     * This is how the `__consumer_offsets` topic's key and value encodes strings.
-     */
+
+    /** Reads a length-prefixed string from the byte-buffer. If the 16 bit length is -1 (0xFFFF) it considers it an empty string.
+      *
+      * This is how the `__consumer_offsets` topic's key and value encodes strings.
+      */
     def getStringPrefixedWithLength: String = {
       val length = bb.getShort()
       if (length == -1) {
@@ -56,11 +52,10 @@ object ConsumerOffsetsDeserializers {
     }
   }
 
-  /**
-   * A kafka deserializer returning a KafkaConsumerGroupTopicPartition from the `__consumer_offsets` topic's keys.
-   *
-   * It supports only version 0 or 1 and return null for version 2 (which means consumer group metadata messages will be filtered out).
-   */
+  /** A kafka deserializer returning a KafkaConsumerGroupTopicPartition from the `__consumer_offsets` topic's keys.
+    *
+    * It supports only version 0 or 1 and return null for version 2 (which means consumer group metadata messages will be filtered out).
+    */
   class ConsumerOffsetsKeyDeserializer extends KafkaDeserializer[ConsumerGroupTopicPartition] {
     override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
 
@@ -78,18 +73,19 @@ object ConsumerOffsetsDeserializers {
           // version 2 is about consumer group metadata, which we ignore and filter out completely
           null
         case _ =>
-          sys.error(s"Unsupported key version: $version. Check the code here: https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go#L388 or here: https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala#L1144")
+          sys.error(
+            s"Unsupported key version: $version. Check the code here: https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go#L388 or here: https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala#L1144"
+          )
       }
     }
 
     override def close(): Unit = ()
   }
 
-  /**
-   * A kafka deserializer returning a ConsumerGroupOffset from the `__consumer_offsets` topic's values.
-   *
-   * It can only be used if the key's version is 0 or 1, otherwise the format of this is different (the value of consumer group metadata messages).
-   */
+  /** A kafka deserializer returning a ConsumerGroupOffset from the `__consumer_offsets` topic's values.
+    *
+    * It can only be used if the key's version is 0 or 1, otherwise the format of this is different (the value of consumer group metadata messages).
+    */
   class ConsumerOffsetsValueDeserializer extends KafkaDeserializer[KafkaConsumerGroupOffset] {
     override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
 
@@ -109,7 +105,9 @@ object ConsumerOffsetsDeserializers {
           val timestamp = bb.getLong()
           (offset, metadata, timestamp)
         case _ =>
-          sys.error(s"Unsupported value version: $version. Check the code here: https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go#L465 or here: https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala#L1163")
+          sys.error(
+            s"Unsupported value version: $version. Check the code here: https://github.com/linkedin/Burrow/blob/07bc78809aa4e5e879d13bfe0c827faa64c85cf1/core/internal/consumer/kafka_client.go#L465 or here: https://github.com/apache/kafka/blob/master/core/src/main/scala/kafka/coordinator/group/GroupMetadataManager.scala#L1163"
+          )
       }
       val offsetDateTime = Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC)
       KafkaConsumerGroupOffset(offset, metadata, offsetDateTime)
@@ -123,16 +121,18 @@ object ConsumerOffsetsDeserializers {
 }
 
 class ConsumerOffsetsSource(
-  private val scope: Scope, // TODO This is slightly dangerous, the scope must not be used after it's closed
-  private val consumerGroupOffsetsStream: ZStream[Any, Throwable, KafkaConsumerGroupOffsets],
-  private val hub: Hub[KafkaConsumerGroupOffsets]
+    private val scope: Scope, // TODO This is slightly dangerous, the scope must not be used after it's closed
+    private val consumerGroupOffsetsStream: ZStream[Any, Throwable, KafkaConsumerGroupOffsets],
+    private val hub: Hub[KafkaConsumerGroupOffsets]
 ) {
   def subscribe(): URIO[Scope, Dequeue[KafkaConsumerGroupOffsets]] = hub.subscribe
 
   def startPublishing(): UIO[Unit] = for {
     consumerGroupOffsetsFiber <- consumerGroupOffsetsStream
       .runScoped(ZSink.foreach(hub.publish))
-      .provideEnvironment(ZEnvironment(scope)).orDie.fork // TODO error handling!
+      .provideEnvironment(ZEnvironment(scope))
+      .orDie
+      .fork // TODO error handling!
     // TODO not expecting subscribers after this -> those would not get the initial snapshot of topic infos, only diffs
     _ <- scope.addFinalizer(consumerGroupOffsetsFiber.interrupt *> hub.shutdown)
   } yield ()
@@ -150,23 +150,25 @@ object ConsumerOffsetsSource {
         consumerOffsetsSourceConfig <- ZIO.service[ConsumerOffsetsSourceConfig]
         hub <- Hub.bounded[KafkaConsumerGroupOffsets](requestedCapacity = 1)
       } yield ConsumerOffsetsSource(
-          scope,
-          // The stream is wrapped in a ZIO which we don't flatMap above because that would mean, we'll wait
-          // until the initial consumption to the end of the consumer offset topic finishes.
-          // Instead we unwrap the ZIO[_,_,ZStream[_,_,_]] and the stream will start emitting when it's ready.
-          ZStream.unwrapScoped(createConsumerGroupOffsetsStream(kafkaClientConfig, consumerOffsetsSourceConfig)),
-          hub
-        )
+        scope,
+        // The stream is wrapped in a ZIO which we don't flatMap above because that would mean, we'll wait
+        // until the initial consumption to the end of the consumer offset topic finishes.
+        // Instead we unwrap the ZIO[_,_,ZStream[_,_,_]] and the stream will start emitting when it's ready.
+        ZStream.unwrapScoped(createConsumerGroupOffsetsStream(kafkaClientConfig, consumerOffsetsSourceConfig)),
+        hub
+      )
     }
 
   private def createConsumerGroupOffsetsStream(
-    kafkaClientConfig: KafkaClientConfig,
-    consumerOffsetsSourceConfig: ConsumerOffsetsSourceConfig
+      kafkaClientConfig: KafkaClientConfig,
+      consumerOffsetsSourceConfig: ConsumerOffsetsSourceConfig
   ): ZIO[Scope, Throwable, ZStream[Any, Throwable, KafkaConsumerGroupOffsets]] = for {
     // Compacted, initial load
     durationCompactedConsumeResult <- loadLatestConsumerOffsets(kafkaClientConfig, consumerOffsetsSourceConfig).timed
     (duration, ccr) = durationCompactedConsumeResult
-    _ <- ZIO.logInfo(s"consumed ${ccr.noOfConsumedMessages} messages, ${ccr.lastValues.size} unique keys in ${duration.toMillis / 1000.0} seconds (${ccr.noOfConsumedMessages / (duration.toSeconds.toDouble)} messages/sec)")
+    _ <- ZIO.logInfo(
+      s"consumed ${ccr.noOfConsumedMessages} messages, ${ccr.lastValues.size} unique keys in ${duration.toMillis / 1000.0} seconds (${ccr.noOfConsumedMessages / (duration.toSeconds.toDouble)} messages/sec)"
+    )
     initialConsumerGroupOffsetsStream = ZStream.succeed((ccr.lastValues, ccr.nextOffsets))
 
     // Live consumption
@@ -174,9 +176,7 @@ object ConsumerOffsetsSource {
     consumer <- Consumer.make(
       ConsumerSettings(
         kafkaClientConfig.brokersList,
-        offsetRetrieval = OffsetRetrieval.Manual(
-          topicPartitions => ZIO.attempt(topicPartitions.view.map(tp => (tp, ccr.nextOffsets(tp))).toMap)
-        ),
+        offsetRetrieval = OffsetRetrieval.Manual(topicPartitions => ZIO.attempt(topicPartitions.view.map(tp => (tp, ccr.nextOffsets(tp))).toMap)),
         properties = kafkaClientConfig.additionalConfig
       )
     )
@@ -185,7 +185,8 @@ object ConsumerOffsetsSource {
     topicPartitionSet = topicPartitions.toSet
 
     // TODO calculate and expose the live lag as a metric
-    liveConsumerGroupOffsetsStream = consumer.plainStream(
+    liveConsumerGroupOffsetsStream = consumer
+      .plainStream(
         Subscription.manual(partitionInfos.map(pi => (pi.topic, pi.partition)): _*),
         Deserializer.bytes,
         Deserializer.bytes
@@ -227,8 +228,8 @@ object ConsumerOffsetsSource {
   } yield consumerGroupOffsetsStream
 
   private def loadLatestConsumerOffsets(
-    kafkaClientConfig: KafkaClientConfig,
-    consumerOffsetsSourceConfig: ConsumerOffsetsSourceConfig
+      kafkaClientConfig: KafkaClientConfig,
+      consumerOffsetsSourceConfig: ConsumerOffsetsSourceConfig
   ): RIO[Scope, CompactedConsumeResult[ConsumerGroupTopicPartition, KafkaConsumerGroupOffset]] = for {
     // This consumer is used only to get the topic-partitions. For the actual consumption we'll create new ones (because we may need more than one)
     consumer <- KafkaConsumerUtils.kafkaConsumerBytesBytesZIO(kafkaClientConfig)
@@ -246,7 +247,8 @@ object ConsumerOffsetsSource {
       .distribute(consumerOffsetsSourceConfig.initialLoadParallelism)
       .zipWithIndex
       .map { (topicPartitions, index) =>
-        ZIO.scoped {
+        ZIO
+          .scoped {
             for {
               consumer <- KafkaConsumerUtils.kafkaConsumerBytesBytesZIO(kafkaClientConfig)
               compactedConsumeResult <- ZIO.attempt(KafkaConsumerUtils.consumeCompactUntilEnd(consumer, topicPartitions))
@@ -254,13 +256,17 @@ object ConsumerOffsetsSource {
           }
           .timed
           .tap { case (duration, ccr) =>
-            ZIO.logInfo(s"#$index consumed ${ccr.noOfConsumedMessages} messages, ${ccr.lastValues.size} unique keys in ${duration.toMillis / 1000.0} seconds (${ccr.noOfConsumedMessages / (duration.toSeconds.toDouble)} messages/sec)")
+            ZIO.logInfo(
+              s"#$index consumed ${ccr.noOfConsumedMessages} messages, ${ccr.lastValues.size} unique keys in ${duration.toMillis / 1000.0} seconds (${ccr.noOfConsumedMessages / (duration.toSeconds.toDouble)} messages/sec)"
+            )
           }
-          .map { case (_, ccr) => ccr.deserialize(
-            consumerOffsetsSourceConfig.consumerOffsetsTopicName,
-            ConsumerOffsetsDeserializers.keyDeserializer,
-            ConsumerOffsetsDeserializers.valueDeserializer
-          ) }
+          .map { case (_, ccr) =>
+            ccr.deserialize(
+              consumerOffsetsSourceConfig.consumerOffsetsTopicName,
+              ConsumerOffsetsDeserializers.keyDeserializer,
+              ConsumerOffsetsDeserializers.valueDeserializer
+            )
+          }
       }
     // And consume them parallel
     // TODO long running threads

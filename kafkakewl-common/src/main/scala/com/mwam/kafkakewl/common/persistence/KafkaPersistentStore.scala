@@ -25,9 +25,9 @@ import zio.stream.*
 import scala.collection.mutable.ListBuffer
 
 final case class BatchMessageEnvelope[Payload](
-  batchSize: Int,
-  indexInBatch: Int,
-  payload: Payload
+    batchSize: Int,
+    indexInBatch: Int,
+    payload: Payload
 )
 
 object BatchMessageEnvelopeJson {
@@ -37,28 +37,21 @@ object BatchMessageEnvelopeJson {
   given [Payload](using JsonDecoder[Payload]): JsonDecoder[BatchMessageEnvelope[Payload]] = DeriveJsonDecoder.gen[BatchMessageEnvelope[Payload]]
 }
 
-
 class KafkaPersistentStore(
-  kafkaClientConfig: KafkaClientConfig,
-  kafkaPersistentStoreConfig: KafkaPersistentStoreConfig,
-  kafkaProducer: TransactionalProducer,
-  initializedRef: Ref.Synchronized[Boolean]
+    kafkaClientConfig: KafkaClientConfig,
+    kafkaPersistentStoreConfig: KafkaPersistentStoreConfig,
+    kafkaProducer: TransactionalProducer,
+    initializedRef: Ref.Synchronized[Boolean]
 ) extends PersistentStore {
   import BatchMessageEnvelopeJson.given
 
   private object KafkaSerde {
     val key: Serde[Any, TopologyId] =
-      Serde.string.inmapM(
-        s => ZIO.succeed(TopologyId(s))
-      )(
-        topologyId => ZIO.succeed(topologyId.value)
-      )
+      Serde.string.inmapM(s => ZIO.succeed(TopologyId(s)))(topologyId => ZIO.succeed(topologyId.value))
     val value: Serde[Any, BatchMessageEnvelope[TopologyDeployment]] =
-      Serde.string.inmapM[Any, BatchMessageEnvelope[TopologyDeployment]](
-        s => ZIO.fromEither(s.fromJson[BatchMessageEnvelope[TopologyDeployment]]).mapError(e => new RuntimeException(e))
-      )(
-        td => ZIO.succeed(td.toJson)
-      )
+      Serde.string.inmapM[Any, BatchMessageEnvelope[TopologyDeployment]](s =>
+        ZIO.fromEither(s.fromJson[BatchMessageEnvelope[TopologyDeployment]]).mapError(e => new RuntimeException(e))
+      )(td => ZIO.succeed(td.toJson))
   }
 
   override def loadLatest(): Task[TopologyDeployments] =
@@ -70,9 +63,9 @@ class KafkaPersistentStore(
           deserializedTopologiesWithDuration <- consumeUntilEnd(consumer, topicName).timed
           (duration, deserializedTopologies) = deserializedTopologiesWithDuration
 
-          failedTopologies = deserializedTopologies
-            .collect { case (id, Left(jsonError)) => ZIO.logError(s"failed to deserialize topology $id: $jsonError")}
-            .toList
+          failedTopologies = deserializedTopologies.collect { case (id, Left(jsonError)) =>
+            ZIO.logError(s"failed to deserialize topology $id: $jsonError")
+          }.toList
 
           topologies = deserializedTopologies
             .collect { case (_, Right(topology)) => topology }
@@ -80,7 +73,9 @@ class KafkaPersistentStore(
             .toMap
 
           _ <- ZIO.foreachDiscard(failedTopologies)(identity)
-          _ <- ZIO.logInfo(s"finished loading ${topologies.size} topologies, discarded ${failedTopologies.size} from the $topicName kafka topic in ${duration.toMillis / 1000.0} seconds")
+          _ <- ZIO.logInfo(
+            s"finished loading ${topologies.size} topologies, discarded ${failedTopologies.size} from the $topicName kafka topic in ${duration.toMillis / 1000.0} seconds"
+          )
         } yield topologies
       }
 
@@ -91,16 +86,20 @@ class KafkaPersistentStore(
         batchSize = topologyDeployments.size
         _ <- ZIO.foreachDiscard(topologyDeployments.values.zipWithIndex) { (td, indexInBatch) =>
           for {
-            recordMetadataWithDuration <- txn.produce(
-              topicName,
-              td.topologyId,
-              BatchMessageEnvelope(batchSize, indexInBatch, td),
-              KafkaSerde.key,
-              KafkaSerde.value,
-              offset = None
-            ).timed
+            recordMetadataWithDuration <- txn
+              .produce(
+                topicName,
+                td.topologyId,
+                BatchMessageEnvelope(batchSize, indexInBatch, td),
+                KafkaSerde.key,
+                KafkaSerde.value,
+                offset = None
+              )
+              .timed
             (duration, recordMetadata) = recordMetadataWithDuration
-            _ <- ZIO.logInfo(s"saved topology ${td.topologyId} into $topicName kafka topic: P#${recordMetadata.partition} @${recordMetadata.offset} in ${duration.toMillis / 1000.0} seconds")
+            _ <- ZIO.logInfo(
+              s"saved topology ${td.topologyId} into $topicName kafka topic: P#${recordMetadata.partition} @${recordMetadata.offset} in ${duration.toMillis / 1000.0} seconds"
+            )
           } yield ()
         }
       } yield ()
@@ -125,15 +124,16 @@ class KafkaPersistentStore(
       for {
         adminClient <- AdminClient.make(kafkaClientConfig.toAdminClientSettings)
         topics <- adminClient.listTopics()
-        _ <- if (topics.contains(topicName)) {
-          if (topicConfig.reCreate) {
-            recreateTopicZIO(adminClient)
+        _ <-
+          if (topics.contains(topicName)) {
+            if (topicConfig.reCreate) {
+              recreateTopicZIO(adminClient)
+            } else {
+              updateTopicZIO(adminClient)
+            }
           } else {
-            updateTopicZIO(adminClient)
+            createTopicZIO(adminClient)
           }
-        } else {
-          createTopicZIO(adminClient)
-        }
       } yield ()
     }
   }
@@ -146,7 +146,9 @@ class KafkaPersistentStore(
     for {
       _ <- ZIO.logInfo(s"Creating topic $topicName...")
       _ <- adminClient.createTopic(newTopic)
-      _ <- ZIO.logInfo(s"Topic $topicName created successfully: partitions = $numPartitions, replication-factor = $replicationFactor, config = $config")
+      _ <- ZIO.logInfo(
+        s"Topic $topicName created successfully: partitions = $numPartitions, replication-factor = $replicationFactor, config = $config"
+      )
     } yield ()
   }
 
@@ -168,10 +170,16 @@ class KafkaPersistentStore(
       topicsDescriptions <- adminClient.describeTopics(Seq(topicName))
       topicDescriptions <- ZIO.getOrFailWith(RuntimeException(s"Could not describe topic $topicName"))(topicsDescriptions.get(topicName))
 
-      numPartitions <- ZIO.getOrFailWith(RuntimeException(s"Topic $topicName has no partition infos."))(topicDescriptions.partitions.map(_.partition).maxOption.map(_ + 1))
-      _ <- ZIO.fail(
-        RuntimeException(s"Topic $topicName has $numPartitions partitions but expected 1. Use a different topic for persistence or delete the $topicName topic and let kafkakewl re-create it with the right number of partitions")
-      ).unless(numPartitions == 1)
+      numPartitions <- ZIO.getOrFailWith(RuntimeException(s"Topic $topicName has no partition infos."))(
+        topicDescriptions.partitions.map(_.partition).maxOption.map(_ + 1)
+      )
+      _ <- ZIO
+        .fail(
+          RuntimeException(
+            s"Topic $topicName has $numPartitions partitions but expected 1. Use a different topic for persistence or delete the $topicName topic and let kafkakewl re-create it with the right number of partitions"
+          )
+        )
+        .unless(numPartitions == 1)
 
       numReplicas = topicDescriptions.partitions.head.replicas.length
       config <- adminClient.getDynamicTopicConfig(topicName)
@@ -190,8 +198,7 @@ class KafkaPersistentStore(
 
       messages
         // Here we don't care about the message batch, just extract the payload
-        .map { case (key, value) => (TopologyId(key), value.fromJson[BatchMessageEnvelope[TopologyDeployment]].map(_.payload)) }
-        .toMap
+        .map { case (key, value) => (TopologyId(key), value.fromJson[BatchMessageEnvelope[TopologyDeployment]].map(_.payload)) }.toMap
     }
 
   private def topicConfig = kafkaPersistentStoreConfig.topic

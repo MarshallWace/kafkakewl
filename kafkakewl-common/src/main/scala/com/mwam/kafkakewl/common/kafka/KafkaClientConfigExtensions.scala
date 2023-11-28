@@ -23,6 +23,7 @@ object KafkaClientConfigExtensions {
       props
     }
 
-    def toAdminClientSettings: AdminClientSettings = AdminClientSettings(kafkaClientConfig.brokersList, 30.seconds, kafkaClientConfig.additionalConfig)
+    def toAdminClientSettings: AdminClientSettings =
+      AdminClientSettings(kafkaClientConfig.brokersList, 30.seconds, kafkaClientConfig.additionalConfig)
   }
 }

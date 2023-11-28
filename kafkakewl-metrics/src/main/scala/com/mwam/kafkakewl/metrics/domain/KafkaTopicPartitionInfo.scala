@@ -31,8 +31,8 @@ object KafkaTopicPartitionInfos {
 }
 
 final case class KafkaTopicPartitionInfoChanges(
-  addedOrUpdated: Map[KafkaTopicPartition, KafkaTopicPartitionInfo],
-  removed: Set[KafkaTopicPartition]
+    addedOrUpdated: Map[KafkaTopicPartition, KafkaTopicPartitionInfo],
+    removed: Set[KafkaTopicPartition]
 )
 
 object KafkaTopicPartitionInfoExtensions {
@@ -49,26 +49,25 @@ object KafkaTopicPartitionInfoExtensions {
     def applyChanges(topicInfoChanges: KafkaTopicPartitionInfoChanges): Map[String, KafkaSingleTopicPartitionInfos] = {
       val newTopicInfos = topicInfoChanges.addedOrUpdated
         .groupBy { case (tp, _) => tp.topic }
-        .map { case (topic, topicPartitionInfos) => (
-          topic,
-          SortedMap.from(topicPartitionInfos.map { case (tp, tpi) => (tp.partition, tpi) })
-        ) }
+        .map { case (topic, topicPartitionInfos) =>
+          (
+            topic,
+            SortedMap.from(topicPartitionInfos.map { case (tp, tpi) => (tp.partition, tpi) })
+          )
+        }
 
       val removedTopicPartitions = topicInfoChanges.removed
         .groupBy(tp => tp.topic)
         .map { case (topic, topicPartitionInfos) => (topic, topicPartitionInfos.map(_.partition).toSet) }
 
-      (topicInfos.keySet union newTopicInfos.keySet)
-        .map { topic =>
-          (
-            topic,
-            topicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
-              ++ newTopicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
-              -- removedTopicPartitions.getOrElse(topic, Set.empty)
-          )
-        }
-        .toMap
+      (topicInfos.keySet union newTopicInfos.keySet).map { topic =>
+        (
+          topic,
+          topicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
+            ++ newTopicInfos.getOrElse(topic, KafkaSingleTopicPartitionInfos.empty)
+            -- removedTopicPartitions.getOrElse(topic, Set.empty)
+        )
+      }.toMap
     }
   }
 }
-

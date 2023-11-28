@@ -9,11 +9,10 @@ package com.mwam.kafkakewl.metrics.domain
 import scala.collection.immutable.SortedMap
 
 final case class KafkaConsumerGroupInfo(
-  topics: Map[String, SortedMap[Int, KafkaConsumerGroupOffset]]
+    topics: Map[String, SortedMap[Int, KafkaConsumerGroupOffset]]
 )
 
-object KafkaConsumerGroupInfo
-{
+object KafkaConsumerGroupInfo {
   val empty: KafkaConsumerGroupInfo = KafkaConsumerGroupInfo(Map.empty)
 }
 
@@ -31,7 +30,7 @@ object KafkaConsumerGroupInfoExtensions {
 
         val newConsumerGroupTopic = cgo match {
           case Some(consumerGroupOffset) => currentConsumerGroupTopic + (partition -> consumerGroupOffset)
-          case None => currentConsumerGroupTopic - partition
+          case None                      => currentConsumerGroupTopic - partition
         }
         val newConsumerGroupInfo = KafkaConsumerGroupInfo(currentConsumerGroupInfo.topics + (topic -> newConsumerGroupTopic))
         newConsumerGroupInfos + (cgtp.group -> newConsumerGroupInfo)

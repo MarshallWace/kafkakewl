@@ -32,11 +32,17 @@ object DeploymentsValidation {
 
     // Validating the deployment itself
     val duplicateDeployTopologyIds = deployments.deploy.duplicatesBy(_.id)
-    val uniqueDeployTopologiesValidation = validationErrorIf(s"cannot deploy duplicate topologies ${duplicateDeployTopologyIds.map(_.quote).mkString(", ")}")(duplicateDeployTopologyIds.nonEmpty)
+    val uniqueDeployTopologiesValidation = validationErrorIf(
+      s"cannot deploy duplicate topologies ${duplicateDeployTopologyIds.map(_.quote).mkString(", ")}"
+    )(duplicateDeployTopologyIds.nonEmpty)
     val duplicateDeleteTopologyIds = deployments.delete.duplicates
-    val uniqueDeleteTopologiesValidation = validationErrorIf(s"cannot delete duplicate topologies ${duplicateDeleteTopologyIds.map(_.quote).mkString(", ")}")(duplicateDeleteTopologyIds.nonEmpty)
+    val uniqueDeleteTopologiesValidation = validationErrorIf(
+      s"cannot delete duplicate topologies ${duplicateDeleteTopologyIds.map(_.quote).mkString(", ")}"
+    )(duplicateDeleteTopologyIds.nonEmpty)
     val overlappingDeployDeleteTopologyIds = deployments.deploy.map(_.id).toSet intersect deployments.delete.toSet
-    val uniqueDeployDeleteTopologiesValidation = validationErrorIf(s"topologies ${overlappingDeployDeleteTopologyIds.map(_.quote).mkString(", ")} cannot be deployed and deleted at the same time")(overlappingDeployDeleteTopologyIds.nonEmpty)
+    val uniqueDeployDeleteTopologiesValidation = validationErrorIf(
+      s"topologies ${overlappingDeployDeleteTopologyIds.map(_.quote).mkString(", ")} cannot be deployed and deleted at the same time"
+    )(overlappingDeployDeleteTopologyIds.nonEmpty)
 
     newTopologiesValidation + uniqueDeployTopologiesValidation + uniqueDeleteTopologiesValidation + uniqueDeployDeleteTopologiesValidation
   }

@@ -10,5 +10,6 @@ final case class ConsumerGroupTopicPartition(group: String, topicPartition: Kafk
   override def toString: String = s"[$group/${topicPartition.topic}/${topicPartition.partition}]"
 }
 object ConsumerGroupTopicPartition {
-  def apply(consumerGroupId: String, topic: String, partition: Int): ConsumerGroupTopicPartition = ConsumerGroupTopicPartition(consumerGroupId, KafkaTopicPartition(topic, partition))
+  def apply(consumerGroupId: String, topic: String, partition: Int): ConsumerGroupTopicPartition =
+    ConsumerGroupTopicPartition(consumerGroupId, KafkaTopicPartition(topic, partition))
 }

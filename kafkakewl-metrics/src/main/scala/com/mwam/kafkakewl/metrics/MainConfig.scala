@@ -15,27 +15,29 @@ import zio.config.{ReadError, read}
 import zio.metrics.connectors.MetricsConfig
 
 final case class MainConfig(
-  kafkaCluster: KafkaClusterConfig,
-  consumerOffsetsSource: ConsumerOffsetsSourceConfig,
-  http: HttpConfig,
-  metrics: MetricsConfig
+    kafkaCluster: KafkaClusterConfig,
+    consumerOffsetsSource: ConsumerOffsetsSourceConfig,
+    http: HttpConfig,
+    metrics: MetricsConfig
 )
 
 final case class ConsumerOffsetsSourceConfig(
-  initialLoadParallelism: Int = 1,
-  compactionInterval: Duration = 1.seconds,
-  consumerGroup: Option[String] = None,
-  consumerOffsetsTopicName: String = "__consumer_offsets",
+    initialLoadParallelism: Int = 1,
+    compactionInterval: Duration = 1.seconds,
+    consumerGroup: Option[String] = None,
+    consumerOffsetsTopicName: String = "__consumer_offsets"
 )
 
 object MainConfig {
   val live: ZLayer[Any, ReadError[String], MainConfig] =
     ZLayer {
-      read(descriptor[MainConfig].from(
-        TypesafeConfigSource.fromTypesafeConfig(
-          TypesafeConfigExtensions.loadWithOverride(".kafkakewl-metrics-config-overrides.conf")
+      read(
+        descriptor[MainConfig].from(
+          TypesafeConfigSource.fromTypesafeConfig(
+            TypesafeConfigExtensions.loadWithOverride(".kafkakewl-metrics-config-overrides.conf")
+          )
         )
-      ))
+      )
     }
 }
 

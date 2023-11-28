@@ -13,9 +13,11 @@ import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
 
-class DeploymentsServerEndpoints(deploymentsEndpoints: DeploymentsEndpoints,
-                                 topologyDeploymentsService: TopologyDeploymentsService,
-                                 tracing: Tracing) {
+class DeploymentsServerEndpoints(
+    deploymentsEndpoints: DeploymentsEndpoints,
+    topologyDeploymentsService: TopologyDeploymentsService,
+    tracing: Tracing
+) {
   given Tracing = tracing
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
@@ -30,7 +32,7 @@ class DeploymentsServerEndpoints(deploymentsEndpoints: DeploymentsEndpoints,
     topologyDeployment <- topologyDeploymentsService.getTopologyDeployment(topologyId)
     _ <- tracing.addEvent(topologyDeployment match
       case Some(_) => "read topology from cache"
-      case None => "topology not found in cache"
+      case None    => "topology not found in cache"
     )
     topologyDeployment <- ZIO.getOrFailWith(DeploymentsFailure.notFound(s"topology $topologyId not found"))(topologyDeployment)
   } yield topologyDeployment

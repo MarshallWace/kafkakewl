@@ -11,7 +11,7 @@ import com.mwam.kafkakewl.metrics.domain.{KafkaSingleTopicPartitionInfos, KafkaT
 import zio.*
 
 class KafkaTopicInfoCache(
-  private val kafkaTopicInfosRef: Ref[Map[String, KafkaSingleTopicPartitionInfos]]
+    private val kafkaTopicInfosRef: Ref[Map[String, KafkaSingleTopicPartitionInfos]]
 ) {
   def getTopics: UIO[Seq[String]] = kafkaTopicInfosRef.get.map(_.keys.toSeq.sorted)
   def getTopicPartitionInfos(topic: String): UIO[Option[KafkaSingleTopicPartitionInfos]] = kafkaTopicInfosRef.get.map(_.get(topic))
@@ -29,11 +29,13 @@ object KafkaTopicInfoCache {
     }
 
   private def processTopicChanges(
-    topicInfoChangesDequeue: Dequeue[KafkaTopicPartitionInfoChanges],
-    topicPartitionInfosRef: Ref[Map[String, KafkaSingleTopicPartitionInfos]]
+      topicInfoChangesDequeue: Dequeue[KafkaTopicPartitionInfoChanges],
+      topicPartitionInfosRef: Ref[Map[String, KafkaSingleTopicPartitionInfos]]
   ) = for {
-      topicInfoChanges <- topicInfoChangesDequeue.take
-      _ <- topicPartitionInfosRef.update(_.applyChanges(topicInfoChanges))
-      _ <- ZIO.logInfo(s"applied ${topicInfoChanges.addedOrUpdated.size} added or updated topic infos and ${topicInfoChanges.removed.size} removed ones")
-    } yield ()
+    topicInfoChanges <- topicInfoChangesDequeue.take
+    _ <- topicPartitionInfosRef.update(_.applyChanges(topicInfoChanges))
+    _ <- ZIO.logInfo(
+      s"applied ${topicInfoChanges.addedOrUpdated.size} added or updated topic infos and ${topicInfoChanges.removed.size} removed ones"
+    )
+  } yield ()
 }

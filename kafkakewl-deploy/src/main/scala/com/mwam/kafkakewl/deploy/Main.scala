@@ -31,16 +31,16 @@ object Main extends ZIOAppDefault {
       SLF4J.slf4j(
         LogFormat.make {
           // For now we just append the message and the cause to the output (which will be the sl4fj message)
-          (builder, _, _, _, message, cause, _, _, _) => {
-            builder.appendText(message())
-            builder.appendCause(cause)
-          }
+          (builder, _, _, _, message, cause, _, _, _) =>
+            {
+              builder.appendText(message())
+              builder.appendCause(cause)
+            }
         }
       )
 
   override def run: ZIO[ZIOAppArgs with Scope, Any, Any] = {
-    val options: ZioHttpServerOptions[Any] = ZioHttpServerOptions
-      .customiseInterceptors
+    val options: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customiseInterceptors
       .metricsInterceptor(ZioMetrics.default[Task]().metricsInterceptor())
       //      .exceptionHandler(new DefectHandler())
       //      .corsInterceptor(
