@@ -7,7 +7,7 @@
 package com.mwam.kafkakewl.common.telemetry
 
 import io.opentelemetry.api.OpenTelemetry
-import io.opentelemetry.api.trace.{DefaultTracer, Tracer}
+import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk
 import zio.{TaskLayer, ZIO, ZLayer, System}
 
