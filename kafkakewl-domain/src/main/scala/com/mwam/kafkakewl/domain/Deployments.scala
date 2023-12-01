@@ -9,6 +9,7 @@ package com.mwam.kafkakewl.domain
 import zio.NonEmptyChunk
 
 final case class DeploymentOptions(
+    dryRun: Boolean = true,
     // TODO make allowing unsafe operations more granular if needed
     allowUnsafe: Boolean = false
 )

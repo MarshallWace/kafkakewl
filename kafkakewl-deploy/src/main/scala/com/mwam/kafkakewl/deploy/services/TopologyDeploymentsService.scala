@@ -13,6 +13,7 @@ import zio.*
 
 class TopologyDeploymentsService private (
     private val persistentStore: PersistentStore,
+    private val topologyDeploymentsToKafkaService: TopologyDeploymentsToKafkaService,
     private val mutex: Semaphore,
     private val topologyDeploymentsRef: Ref[TopologyDeployments]
 ) {
@@ -20,6 +21,7 @@ class TopologyDeploymentsService private (
     mutex.withPermit {
       for {
         _ <- ZIO.logInfo(s"deploying $deployments")
+
         // TODO authorization
 
         // Validation before deployment
@@ -29,20 +31,29 @@ class TopologyDeploymentsService private (
           .toZIOParallelErrors
           .mapError(DeploymentsFailure.validation)
 
-        // TODO performing the kafka deployment itself, returns the new TopologyDeployments
-        // TODO persisting the new TopologyDeployments
-        // TODO publishing the change-log messages
-        // TODO update the in-memory state
+        // Performing the actual deployment to kafka (dryRun is respected here)
+        success <- topologyDeploymentsToKafkaService
+          .deploy(deployments)
+          .logError("deploying TopologyDeployments")
+          .mapError(DeploymentsFailure.deployment)
 
-        // Just same fake topology deployments for now
+        // Creating the new TopologyDeployments from the statuses
         topologyDeployments = deployments.deploy
-          .map(t => (t.id, TopologyDeployment(t.id, TopologyDeploymentStatus(), Some(t))))
+          .map(t => (t.id, TopologyDeployment(t.id, success.statuses(t.id), Some(t))))
           .toMap ++ deployments.delete
-          .map(tid => (tid, TopologyDeployment(tid, TopologyDeploymentStatus(), None)))
+          .map(tid => (tid, TopologyDeployment(tid, success.statuses(tid), None)))
           .toMap
 
-        _ <- persistentStore.save(topologyDeployments).logError("saving TopologyDeployments").mapError(DeploymentsFailure.persistence)
-        _ <- topologyDeploymentsRef.update { _ ++ topologyDeployments -- deployments.delete }
+        _ <- (for {
+          // Persisting the new TopologyDeployments
+          _ <- persistentStore.save(topologyDeployments).logError("saving TopologyDeployments").mapError(DeploymentsFailure.persistence)
+
+          // Updating the in-memory state if everything succeeded so far
+          _ <- topologyDeploymentsRef.update {
+            _ ++ topologyDeployments -- deployments.delete
+          }
+        } yield ()).unless(deployments.options.dryRun) // Not making any actual changes if dryRun = true
+
         _ <- ZIO.logInfo(s"finished deploying $deployments")
       } yield DeploymentsSuccess(
         topologyDeployments
@@ -62,14 +73,15 @@ class TopologyDeploymentsService private (
 }
 
 object TopologyDeploymentsService {
-  def live: ZLayer[PersistentStore, Nothing, TopologyDeploymentsService] =
+  def live: ZLayer[PersistentStore & TopologyDeploymentsToKafkaService, Nothing, TopologyDeploymentsService] =
     ZLayer.fromZIO {
       for {
         persistentStore <- ZIO.service[PersistentStore]
+        topologyDeploymentsToKafkaService <- ZIO.service[TopologyDeploymentsToKafkaService]
         // TODO what happens if we fail here?
         topologyDeployments <- persistentStore.loadLatest().orDie
         mutex <- Semaphore.make(permits = 1)
         topologyDeploymentsRef <- Ref.make(topologyDeployments)
-      } yield TopologyDeploymentsService(persistentStore, mutex, topologyDeploymentsRef)
+      } yield TopologyDeploymentsService(persistentStore, topologyDeploymentsToKafkaService, mutex, topologyDeploymentsRef)
     }
 }
