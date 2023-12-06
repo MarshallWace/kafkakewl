@@ -6,38 +6,57 @@
 
 package com.mwam.kafkakewl.common.kafka
 
-import com.mwam.kafkakewl.domain.config.KafkaClientConfig
-import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.serialization.{BytesDeserializer, Deserializer, StringDeserializer}
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.utils.Bytes
 import zio.*
+import zio.kafka.consumer.{Consumer, Subscription}
+import zio.kafka.consumer.Subscription.Manual
+import zio.kafka.serde.Deserializer
+import zio.stream.ZSink
 
 import scala.annotation.targetName
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
-object KafkaConsumerExtensions {
-  extension [Key, Value](consumer: Consumer[Key, Value]) {
-    def beginningOffsets(topicPartitions: Set[TopicPartition]): Map[TopicPartition, Long] = {
-      consumer.beginningOffsets(topicPartitions.asJava).asScala.map { case (tp, o) => (tp, o: Long) }.toMap
+final case class CompactedConsumeResult[Key, Value](
+    lastValues: Map[Key, Option[Value]],
+    nextOffsets: Map[TopicPartition, Long],
+    noOfConsumedMessages: Long
+) {
+  @targetName("add")
+  def +(other: CompactedConsumeResult[Key, Value]): CompactedConsumeResult[Key, Value] = CompactedConsumeResult(
+    lastValues ++ other.lastValues,
+    nextOffsets ++ other.nextOffsets,
+    noOfConsumedMessages + other.noOfConsumedMessages
+  )
+}
+object KafkaConsumerUtils {
+
+  extension (compactedConsumeResult: CompactedConsumeResult[Bytes, Bytes]) {
+    def deserialize[Key, Value <: AnyRef](
+        topic: String,
+        keyDeserializer: Deserializer[Any, Key],
+        valueDeserializer: Deserializer[Any, Value]
+    ): UIO[CompactedConsumeResult[Key, Value]] = {
+
+      for {
+        lastVals <- ZIO.collect(compactedConsumeResult.lastValues) {
+          case (keyBytes, valueBytesOption) => {
+            val key = keyDeserializer
+              .deserialize(topic, new RecordHeaders(), keyBytes.get())
+            val value = ZIO
+              .fromOption(valueBytesOption)
+              .flatMap(valueBytes => valueDeserializer.deserialize(topic, new RecordHeaders(), valueBytes.get()).option)
+              .orElseSucceed(None)
+
+            key.zipWith(value)((key, value) => (key, value)).mapError(_ => None): IO[Option[Nothing], (Key, Option[Value])]
+          }
+        }
+      } yield (new CompactedConsumeResult[Key, Value](lastVals, compactedConsumeResult.nextOffsets, compactedConsumeResult.noOfConsumedMessages))
+
     }
-
-    def endOffsets(topicPartitions: Set[TopicPartition]): Map[TopicPartition, Long] = {
-      consumer.endOffsets(topicPartitions.asJava).asScala.map { case (tp, o) => (tp, o: Long) }.toMap
-    }
-
-    def positions(topicPartitions: Seq[TopicPartition]): Map[TopicPartition, Long] =
-      topicPartitions
-        .map(tp => (tp, consumer.position(tp)))
-        .toMap
-
-    def topicPartitionsOf(topic: String): List[TopicPartition] =
-      consumer
-        .partitionsFor(topic)
-        .asScala
-        .toList
-        .map(pi => new TopicPartition(pi.topic, pi.partition))
   }
 
   extension (topicPartitions: List[TopicPartition]) {
@@ -53,130 +72,75 @@ object KafkaConsumerExtensions {
     }
   }
 
-  extension (compactedConsumeResult: CompactedConsumeResult[Bytes, Bytes]) {
-    def deserialize[Key, Value <: AnyRef](
-        topic: String,
-        keyDeserializer: Deserializer[Key],
-        valueDeserializer: Deserializer[Value]
-    ): CompactedConsumeResult[Key, Value] = {
-      new CompactedConsumeResult[Key, Value](
-        compactedConsumeResult.lastValues
-          .flatMap { case (keyBytes, valueBytesOption) =>
-            val key = keyDeserializer.deserialize(topic, keyBytes.get)
-            // TODO refactor this to re-use elsewhere
-            // the key deserializer can return null in which case we need to skip this key-value altogether
-            if (key == null) {
-              None
-            } else {
-              val value = valueBytesOption.map(valueBytes => valueDeserializer.deserialize(topic, valueBytes.get))
-              Some((key, value))
-            }
-          },
-        compactedConsumeResult.nextOffsets,
-        compactedConsumeResult.noOfConsumedMessages
-      )
-    }
-  }
-}
-
-final case class CompactedConsumeResult[Key, Value](
-    lastValues: Map[Key, Option[Value]],
-    nextOffsets: Map[TopicPartition, Long],
-    noOfConsumedMessages: Long
-) {
-  @targetName("add")
-  def +(other: CompactedConsumeResult[Key, Value]): CompactedConsumeResult[Key, Value] = CompactedConsumeResult(
-    lastValues ++ other.lastValues,
-    nextOffsets ++ other.nextOffsets,
-    noOfConsumedMessages + other.noOfConsumedMessages
-  )
-}
-
-object KafkaConsumerUtils {
-  import KafkaConsumerExtensions.*
-  import KafkaClientConfigExtensions.*
-
-  def kafkaConsumer[Key, Value](
-      kafkaClientConfig: KafkaClientConfig,
-      keyDeserializer: Deserializer[Key],
-      valueDeserializer: Deserializer[Value]
-  ): RIO[Scope, Consumer[Key, Value]] = {
-    ZIO.fromAutoCloseable(
-      ZIO.attempt(
-        new KafkaConsumer[Key, Value](
-          kafkaClientConfig.toProperties,
-          keyDeserializer,
-          valueDeserializer
-        )
-      )
-    )
-  }
-
-  def kafkaConsumerStringStringZIO(kafkaClientConfig: KafkaClientConfig): RIO[Scope, Consumer[String, String]] =
-    kafkaConsumer(kafkaClientConfig, new StringDeserializer(), new StringDeserializer())
-
-  def kafkaConsumerBytesBytesZIO(kafkaClientConfig: KafkaClientConfig): RIO[Scope, Consumer[Bytes, Bytes]] =
-    kafkaConsumer(kafkaClientConfig, new BytesDeserializer(), new BytesDeserializer())
-
   def consumeUntilEnd[Key, Value](
-      consumer: Consumer[Key, Value],
+      consumer: Consumer,
       topicPartitions: List[TopicPartition],
+      keySerializer: Deserializer[Any, Key],
+      valueSerializer: Deserializer[Any, Value],
       pollTimeout: Duration = 100.millis
-  )(
-      handleConsumerRecords: ConsumerRecords[Key, Value] => Unit
-  ): Map[TopicPartition, Long] = {
+  ): Task[(Map[TopicPartition, Long], List[ConsumerRecord[Key, Value]])] = {
+    val subscription = Manual(topicPartitions.toSet)
+    for {
+      endOffsets <- consumer.endOffsets(topicPartitions.toSet)
+      partitionMapAndRecords <- consumer
+        .plainStream(subscription, keySerializer, valueSerializer)
+        .aggregateAsyncWithin(ZSink.collectAll, Schedule.fixed(pollTimeout))
+        .mapZIO(record =>
+          ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(nextOffsets => (record, nextOffsets.toMap))
+        )
+        .takeUntil { (_, nextOffsets) =>
+          !endOffsets.exists { case (tp, endOffset) => nextOffsets.get(tp).exists(nextOffset => nextOffset < endOffset) }
+        }
+        .map((records, _) => records)
+        .runFold((mutable.Map.empty[TopicPartition, Long], mutable.ArrayBuffer.empty[ConsumerRecord[Key, Value]])) {
+          case ((nextTopicPartitionOffsets, records), newRecords) => {
+            for (newRecord <- newRecords) {
+              nextTopicPartitionOffsets.update(new TopicPartition(newRecord.record.topic, newRecord.partition), newRecord.offset.offset + 1L)
+              records.addOne(newRecord.record)
+            }
 
-    val pollTimeoutJava = java.time.Duration.ofNanos(pollTimeout.toNanos)
-    val topicPartitionsJava = topicPartitions.asJava
+            (nextTopicPartitionOffsets, records)
+          }
+        }
 
-    consumer.assign(topicPartitionsJava)
-    consumer.seekToBeginning(topicPartitionsJava)
-    val endOffsets = consumer.endOffsets(topicPartitions.toSet)
+      (partitionMap, records) = partitionMapAndRecords
 
-    var shouldConsume = true
-    val nextTopicPartitionOffsets = mutable.Map.empty[TopicPartition, Long] ++ consumer.positions(topicPartitions)
-    while (shouldConsume) {
-      val consumerRecords = consumer.poll(pollTimeoutJava)
-      val nextOffsets = consumer.positions(topicPartitions)
-      shouldConsume = endOffsets.exists { case (tp, endOffset) => nextOffsets.get(tp).exists(nextOffset => nextOffset < endOffset) }
-      handleConsumerRecords(consumerRecords)
-      consumerRecords.forEach { cr =>
-        nextTopicPartitionOffsets.update(new TopicPartition(cr.topic, cr.partition), cr.offset + 1L)
-      }
-    }
-
-    nextTopicPartitionOffsets.toMap
+    } yield (partitionMap.toMap, records.toList)
   }
 
   def consumeCompactUntilEnd[Key, Value](
-      consumer: Consumer[Key, Value],
+      consumer: Consumer,
       topicPartitions: List[TopicPartition],
+      keySerializer: Deserializer[Any, Key],
+      valueSerializer: Deserializer[Any, Value],
       removeTombstones: Boolean = true,
       pollTimeout: Duration = 100.millis
-  ): CompactedConsumeResult[Key, Value] = {
-    val lastValues = mutable.Map.empty[Key, Option[Value]]
-    var noOfConsumedMessages = 0L
-    val nextTopicPartitionOffsets = consumeUntilEnd(
+  ): Task[CompactedConsumeResult[Key, Value]] = {
+
+    consumeUntilEnd(
       consumer,
       topicPartitions,
+      keySerializer,
+      valueSerializer,
       pollTimeout
-    ) { crs =>
-      crs.forEach { cr =>
-        {
-          lastValues += (cr.key -> Option(cr.value))
-          noOfConsumedMessages += 1
-        }
+    ).map { (nextTopicPartitionOffsets, records) =>
+      val lastValues = mutable.Map.empty[Key, Option[Value]]
+      var noOfConsumedMessages = 0L
+      for (record <- records) {
+        lastValues += (record.key -> Option(record.value))
+        noOfConsumedMessages += 1
       }
-    }
 
-    CompactedConsumeResult(
-      if (removeTombstones) {
-        lastValues.view.collect { case (key, Some(value)) => (key, Some(value)) }.toMap
-      } else {
-        lastValues.toMap
-      },
-      nextTopicPartitionOffsets,
-      noOfConsumedMessages
-    )
+      CompactedConsumeResult(
+        if (removeTombstones) {
+          lastValues.view.collect { case (key, Some(value)) => (key, Some(value)) }.toMap
+        } else {
+          lastValues.toMap
+        },
+        nextTopicPartitionOffsets,
+        noOfConsumedMessages
+      )
+    }
   }
+
 }
