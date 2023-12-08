@@ -15,7 +15,7 @@ import sttp.model.StatusCode
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.generic.auto.*
 import sttp.tapir.json.zio.*
-import sttp.tapir.ztapir.*
+import sttp.tapir.ztapir.{oneOfVariant, *}
 import sttp.tapir.{Codec, CodecFormat, FieldName, PublicEndpoint, Schema, oneOf}
 import zio.*
 import zio.json.{JsonDecoder, JsonEncoder}
@@ -26,7 +26,8 @@ class DeploymentsEndpoints() extends EndpointUtils {
 
   private val queryDeploymentsFailureOutput = oneOf[QueryDeploymentsFailure](
     oneOfVariant(statusCode(StatusCode.NotFound).and(jsonBody[DeploymentsFailure.NotFound])),
-    oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[DeploymentsFailure.Authorization]))
+    oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[DeploymentsFailure.Authorization])),
+    oneOfVariant(statusCode(StatusCode.RequestTimeout).and(jsonBody[DeploymentsFailure.Timeout]))
   )
 
   val getDeploymentEndpoint: PublicEndpoint[TopologyId, QueryDeploymentsFailure, TopologyDeployment, Any] = deploymentEndpoint
@@ -53,7 +54,8 @@ class DeploymentsEndpoints() extends EndpointUtils {
         oneOfVariant(statusCode(StatusCode.Unauthorized).and(jsonBody[DeploymentsFailure.Authorization])),
         oneOfVariant(statusCode(StatusCode.UnprocessableEntity).and(jsonBody[DeploymentsFailure.Validation])),
         oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DeploymentsFailure.Deployment])),
-        oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DeploymentsFailure.Persistence]))
+        oneOfVariant(statusCode(StatusCode.InternalServerError).and(jsonBody[DeploymentsFailure.Persistence])),
+        oneOfVariant(statusCode(StatusCode.RequestTimeout).and(jsonBody[DeploymentsFailure.Timeout]))
       )
     )
     .out(jsonBody[DeploymentsSuccess])

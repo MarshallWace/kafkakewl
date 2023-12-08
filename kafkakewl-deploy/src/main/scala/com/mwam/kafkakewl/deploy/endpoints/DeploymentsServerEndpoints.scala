@@ -6,9 +6,13 @@
 
 package com.mwam.kafkakewl.deploy.endpoints
 
+import com.mwam.kafkakewl.common.http.EndpointUtils
 import com.mwam.kafkakewl.common.telemetry.zServerLogicWithTracing
+import com.mwam.kafkakewl.deploy.MainConfig
 import com.mwam.kafkakewl.deploy.services.TopologyDeploymentsService
-import com.mwam.kafkakewl.domain.*
+import com.mwam.kafkakewl.domain.DeploymentsFailure.Timeout
+import com.mwam.kafkakewl.domain.config.HttpConfig
+import com.mwam.kafkakewl.domain.{config, *}
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -16,14 +20,24 @@ import zio.telemetry.opentelemetry.tracing.Tracing
 class DeploymentsServerEndpoints(
     deploymentsEndpoints: DeploymentsEndpoints,
     topologyDeploymentsService: TopologyDeploymentsService,
-    tracing: Tracing
+    tracing: Tracing,
+    mainConfig: MainConfig
 ) {
   given Tracing = tracing
 
+  implicit val timeout: config.Timeout = mainConfig.http.timeout
+  implicit val timeoutException: TimeoutException[DeploymentsFailure.Timeout] = TimeoutException(DeploymentsFailure.timeout)
+
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
-    deploymentsEndpoints.getDeploymentEndpoint.zServerLogicWithTracing(getDeployment),
-    deploymentsEndpoints.getDeploymentsEndpoint.zServerLogicWithTracing(getDeployments),
-    deploymentsEndpoints.postDeploymentsEndpoint.zServerLogicWithTracing(postDeployments)
+    deploymentsEndpoints.getDeploymentEndpoint.zServerLogicWithTracing(
+      EndpointUtils.timeout(getDeployment)
+    ),
+    deploymentsEndpoints.getDeploymentsEndpoint.zServerLogicWithTracing(
+      EndpointUtils.timeout(getDeployments)
+    ),
+    deploymentsEndpoints.postDeploymentsEndpoint.zServerLogicWithTracing(
+      EndpointUtils.timeout(postDeployments)
+    )
   )
 
   private def getDeployment(topologyId: TopologyId): ZIO[Any, QueryDeploymentsFailure, TopologyDeployment] = for {
@@ -45,6 +59,6 @@ class DeploymentsServerEndpoints(
 }
 
 object DeploymentsServerEndpoints {
-  val live: ZLayer[DeploymentsEndpoints & TopologyDeploymentsService & Tracing, Nothing, DeploymentsServerEndpoints] =
-    ZLayer.fromFunction(DeploymentsServerEndpoints(_, _, _))
+  val live: ZLayer[DeploymentsEndpoints & TopologyDeploymentsService & Tracing & MainConfig, Nothing, DeploymentsServerEndpoints] =
+    ZLayer.fromFunction(DeploymentsServerEndpoints(_, _, _, _))
 }

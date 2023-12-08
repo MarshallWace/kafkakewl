@@ -13,9 +13,11 @@ sealed trait QueryFailure
 object Failures {
   final case class NotFound(notFound: Seq[String]) extends QueryFailure
   final case class Authorization(authorizationFailed: Seq[String]) extends QueryFailure
+  final case class Timeout(timeout: String) extends QueryFailure
 
   def notFound(notFound: String*): NotFound = NotFound(notFound)
   def authorization(throwable: Throwable): Authorization = Authorization(errors(throwable))
+  def timeout: Timeout = Timeout("Request timed out. Please try again later.")
 
   private def errors(throwable: Throwable): Seq[String] = Seq(throwable.getMessage)
 }

@@ -6,17 +6,29 @@
 
 package com.mwam.kafkakewl.deploy.endpoints
 
-import sttp.tapir.PublicEndpoint
+import com.mwam.kafkakewl.common.http.{EndpointUtils, ErrorResponse}
+//import com.mwam.kafkakewl.deploy.domain.{Failures, QueryFailure}
+import sttp.model.StatusCode
+import sttp.tapir.{EndpointOutput, PublicEndpoint}
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
+//import sttp.tapir.ztapir.a
 import zio.*
+import sttp.tapir.generic.auto.*
+import sttp.tapir.json.zio.jsonBody
 import zio.metrics.connectors.prometheus.PrometheusPublisher
+
+import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 class Endpoints(
     deploymentServerEndpoints: DeploymentsServerEndpoints,
     prometheusPublisher: PrometheusPublisher
 ) {
-  private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] = endpoint.in("metrics").get.out(stringBody)
+  private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] =
+    endpoint
+      .in("metrics")
+      .get
+      .out(stringBody)
 
   // Health check endpoints. As of now, just return 200 no preparation is done
   // after the HTTP server starts.
@@ -30,7 +42,9 @@ class Endpoints(
   val endpoints: List[ZServerEndpoint[Any, Any]] = {
     val api = deploymentServerEndpoints.endpoints
     val docs = docsEndpoints(api)
-    val metrics = List(metricsEndpoint.zServerLogic[Any](_ => getMetrics))
+    val metrics = List(
+      metricsEndpoint.zServerLogic[Any](_ => getMetrics)
+    )
     val health =
       List(livenessEndpoint, readinessEndpoint, startupProbeEndpoint)
         .map(

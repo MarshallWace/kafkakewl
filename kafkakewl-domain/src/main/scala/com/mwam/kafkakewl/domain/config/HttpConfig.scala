@@ -7,5 +7,8 @@
 package com.mwam.kafkakewl.domain.config
 
 final case class HttpConfig(
-    port: Int = 8080
+    port: Int = 8080,
+    timeout: Timeout = Timeout(10)
 )
+
+case class Timeout(seconds: Int)
