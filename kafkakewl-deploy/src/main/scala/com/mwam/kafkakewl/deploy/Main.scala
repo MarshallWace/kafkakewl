@@ -20,7 +20,7 @@ import zio.metrics.jvm.DefaultJvmMetrics
 import zio.telemetry.opentelemetry.context.ContextStorage
 import zio.telemetry.opentelemetry.tracing.Tracing
 import com.mwam.kafkakewl.utils.logging.Logging.{deployLogger, localLogger}
-import zio._
+import zio.*
 
 object Main extends ZIOAppDefault {
 
