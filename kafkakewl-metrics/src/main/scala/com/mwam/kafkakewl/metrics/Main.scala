@@ -12,13 +12,12 @@ import com.mwam.kafkakewl.common.telemetry.GlobalTracer
 import com.mwam.kafkakewl.domain.config.KafkaClientConfig
 import com.mwam.kafkakewl.metrics.endpoints.*
 import com.mwam.kafkakewl.metrics.services.*
+import com.mwam.kafkakewl.utils.logging.Logging.{deployLogger, localLogger}
 import io.opentelemetry.api.trace.Tracer
 import sttp.tapir.server.metrics.zio.ZioMetrics
 import sttp.tapir.server.ziohttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import zio.*
 import zio.http.Server
-import zio.logging.LogFormat
-import zio.logging.backend.SLF4J
 import zio.metrics.connectors.prometheus
 import zio.metrics.jvm.DefaultJvmMetrics
 import zio.telemetry.opentelemetry.context.ContextStorage
@@ -27,18 +26,16 @@ import zio.telemetry.opentelemetry.tracing.Tracing
 object Main extends ZIOAppDefault {
 
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
-    Runtime.removeDefaultLoggers >>>
-      // TODO play with this more so that we support structured logging properly
-      SLF4J.slf4j(
-        LogFormat.make {
-          // For now we just append the message and the cause to the output (which will be the sl4fj message)
-          (builder, _, _, _, message, cause, _, _, _) =>
-            {
-              builder.appendText(message())
-              builder.appendCause(cause)
-            }
-        }
-      )
+    ZLayer.fromZIO {
+      ZIOAppArgs.getArgs
+        .map(args =>
+          if (args.mkString == "local") {
+            localLogger
+          } else {
+            deployLogger
+          }
+        )
+    }.flatten
 
   override def run: ZIO[ZIOAppArgs with Scope, Any, Any] = {
     val options: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customiseInterceptors
