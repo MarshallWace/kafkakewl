@@ -8,11 +8,10 @@ package com.mwam.kafkakewl.deploy.endpoints
 
 import com.mwam.kafkakewl.common.http.EndpointUtils
 import com.mwam.kafkakewl.common.telemetry.zServerLogicWithTracing
-import com.mwam.kafkakewl.deploy.MainConfig
 import com.mwam.kafkakewl.deploy.services.TopologyDeploymentsService
 import com.mwam.kafkakewl.domain.DeploymentsFailure.Timeout
 import com.mwam.kafkakewl.domain.config.HttpConfig
-import com.mwam.kafkakewl.domain.{config, *}
+import com.mwam.kafkakewl.domain.{DeploymentsFailure, config, *}
 import sttp.tapir.ztapir.*
 import zio.*
 import zio.telemetry.opentelemetry.tracing.Tracing
@@ -21,22 +20,20 @@ class DeploymentsServerEndpoints(
     deploymentsEndpoints: DeploymentsEndpoints,
     topologyDeploymentsService: TopologyDeploymentsService,
     tracing: Tracing,
-    mainConfig: MainConfig
+    httpConfig: HttpConfig
 ) {
   given Tracing = tracing
-
-  implicit val timeout: config.Timeout = mainConfig.http.timeout
-  implicit val timeoutException: TimeoutException[DeploymentsFailure.Timeout] = TimeoutException(DeploymentsFailure.timeout)
+  private def timeout[A, B, E >: DeploymentsFailure.Timeout] = EndpointUtils.timeout[A, E, B, Any](httpConfig.timeout, DeploymentsFailure.timeout)
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     deploymentsEndpoints.getDeploymentEndpoint.zServerLogicWithTracing(
-      EndpointUtils.timeout(getDeployment)
+      timeout(getDeployment)
     ),
     deploymentsEndpoints.getDeploymentsEndpoint.zServerLogicWithTracing(
-      EndpointUtils.timeout(getDeployments)
+      timeout(getDeployments)
     ),
     deploymentsEndpoints.postDeploymentsEndpoint.zServerLogicWithTracing(
-      EndpointUtils.timeout(postDeployments)
+      timeout(postDeployments)
     )
   )
 
@@ -59,6 +56,6 @@ class DeploymentsServerEndpoints(
 }
 
 object DeploymentsServerEndpoints {
-  val live: ZLayer[DeploymentsEndpoints & TopologyDeploymentsService & Tracing & MainConfig, Nothing, DeploymentsServerEndpoints] =
+  val live: ZLayer[DeploymentsEndpoints & TopologyDeploymentsService & Tracing & HttpConfig, Nothing, DeploymentsServerEndpoints] =
     ZLayer.fromFunction(DeploymentsServerEndpoints(_, _, _, _))
 }

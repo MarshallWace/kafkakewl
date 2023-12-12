@@ -95,5 +95,3 @@ object DeploymentsFailure {
   *   the statuses of the topology deployments.
   */
 final case class DeploymentsSuccess(statuses: Map[TopologyId, TopologyDeploymentStatus])
-
-case class TimeoutException[E](exception: E)

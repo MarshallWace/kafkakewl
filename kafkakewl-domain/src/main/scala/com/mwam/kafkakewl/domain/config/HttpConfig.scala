@@ -6,9 +6,11 @@
 
 package com.mwam.kafkakewl.domain.config
 
+import zio.Duration
+
 final case class HttpConfig(
     port: Int = 8080,
-    timeout: Timeout = Timeout(10)
+    timeout: Duration = Duration.fromSeconds(10)
 )
 
 case class Timeout(seconds: Int)

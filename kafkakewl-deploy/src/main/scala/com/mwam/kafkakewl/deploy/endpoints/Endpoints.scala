@@ -16,11 +16,7 @@ class Endpoints(
     deploymentServerEndpoints: DeploymentsServerEndpoints,
     prometheusPublisher: PrometheusPublisher
 ) {
-  private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] =
-    endpoint
-      .in("metrics")
-      .get
-      .out(stringBody)
+  private val metricsEndpoint: PublicEndpoint[Unit, Unit, String, Any] = endpoint.in("metrics").get.out(stringBody)
 
   // Health check endpoints. As of now, just return 200 no preparation is done
   // after the HTTP server starts.
@@ -49,11 +45,9 @@ class Endpoints(
     .fromServerEndpoints[Task](apiEndpoints, "kafkakewl-deploy", "1.0.0")
 
   // Regex to remove timestamp from the end of each metric. This is to fix the staleness issue in prometheus.
-  private def getMetrics: ZIO[Any, Unit, String] =
-    prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
+  private def getMetrics: ZIO[Any, Unit, String] = prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
 }
 
 object Endpoints {
-  val live: ZLayer[DeploymentsServerEndpoints & PrometheusPublisher, Nothing, Endpoints] =
-    ZLayer.fromFunction(Endpoints(_, _))
+  val live: ZLayer[DeploymentsServerEndpoints & PrometheusPublisher, Nothing, Endpoints] = ZLayer.fromFunction(Endpoints(_, _))
 }

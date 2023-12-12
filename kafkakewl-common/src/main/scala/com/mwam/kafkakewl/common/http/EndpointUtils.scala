@@ -6,8 +6,6 @@
 
 package com.mwam.kafkakewl.common.http
 
-import com.mwam.kafkakewl.domain.TimeoutException
-import com.mwam.kafkakewl.domain.config.Timeout
 import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.TextPlain
@@ -38,8 +36,8 @@ object EndpointUtils {
     stringBodyUtf8AnyFormat(zioYamlCodec.mapDecode(jsonDecode.rawDecode)(jsonDecode.encode))
   }
 
-  def timeout[A, E, R, B, E1 >: E](f: A => ZIO[R, E1, B])(implicit timeout: Timeout, exception: TimeoutException[E]): A => ZIO[R, E1, B] = { a =>
-    f(a).timeoutFail(exception.exception)(Duration.fromSeconds(timeout.seconds))
+  def timeout[A, E, B, R](timeout: Duration, exception: E)(f: A => ZIO[Any, E, B]): A => ZIO[R, E, B] = { a =>
+    f(a).timeoutFail(exception)(timeout)
   }
 
   private val zioYamlCodec: Codec[String, String, TextPlain] =
