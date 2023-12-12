@@ -6,19 +6,11 @@
 
 package com.mwam.kafkakewl.deploy.endpoints
 
-import com.mwam.kafkakewl.common.http.{EndpointUtils, ErrorResponse}
-//import com.mwam.kafkakewl.deploy.domain.{Failures, QueryFailure}
-import sttp.model.StatusCode
-import sttp.tapir.{EndpointOutput, PublicEndpoint}
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 import sttp.tapir.ztapir.*
-//import sttp.tapir.ztapir.a
 import zio.*
-import sttp.tapir.generic.auto.*
-import sttp.tapir.json.zio.jsonBody
 import zio.metrics.connectors.prometheus.PrometheusPublisher
-
-import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
 class Endpoints(
     deploymentServerEndpoints: DeploymentsServerEndpoints,
