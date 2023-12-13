@@ -206,9 +206,7 @@ object ConsumerOffsetsSource {
           }
 
         val zipped: IO[Throwable, Option[(ConsumerGroupTopicPartition, Option[KafkaConsumerGroupOffset])]] =
-          key
-            .zipWith(value)((key, value) => key.zip(Some(value)))
-            .orElseFail(new Throwable("fail"))
+          key.zipWith(value)((key, value) => key.zip(Some(value)))
 
         zipped
       }
