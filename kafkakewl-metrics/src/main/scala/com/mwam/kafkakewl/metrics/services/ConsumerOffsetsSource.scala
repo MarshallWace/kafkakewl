@@ -61,7 +61,6 @@ object ConsumerOffsetsDeserializers {
     * It supports only version 0 or 1 and return null for version 2 (which means consumer group metadata messages will be filtered out).
     */
   class ConsumerOffsetsKeyDeserializer extends Deserializer[Any, Option[ConsumerGroupTopicPartition]] {
-//    override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = ()
 
     override def deserialize(topic: String, headers: Headers, data: Array[Byte]): IO[Throwable, Option[ConsumerGroupTopicPartition]] = {
       val bb = ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN)
@@ -71,11 +70,11 @@ object ConsumerOffsetsDeserializers {
           val consumerGroup = bb.getStringPrefixedWithLength
           val topic = bb.getStringPrefixedWithLength
           val partition = bb.getInt()
-          ZIO.succeed(Some(ConsumerGroupTopicPartition(consumerGroup, topic, partition)))
+          ZIO.some(ConsumerGroupTopicPartition(consumerGroup, topic, partition))
 
         case 2 =>
           // version 2 is about consumer group metadata, which we ignore and filter out completely
-          ZIO.succeed(None)
+          ZIO.none
         case _ =>
           ZIO.fail(
             new RuntimeException(
@@ -172,7 +171,6 @@ object ConsumerOffsetsSource {
     _ <- ZIO.logInfo(
       s"consumed ${ccr.noOfConsumedMessages} messages, ${ccr.lastValues.size} unique keys in ${duration.toMillis / 1000.0} seconds (${ccr.noOfConsumedMessages / duration.toSeconds.toDouble} messages/sec)"
     )
-    _ <- ZIO.logInfo("NEXT OFFSETS: " + ccr.nextOffsets.mkString(", "))
     initialConsumerGroupOffsetsStream = ZStream.succeed((ccr.lastValues, ccr.nextOffsets))
 
     // Live consumption
@@ -204,7 +202,7 @@ object ConsumerOffsetsSource {
         val value: IO[Throwable, Option[KafkaConsumerGroupOffset]] =
           Option(cr.value) match {
             case Some(value) => ConsumerOffsetsDeserializers.valueDeserializer.deserialize(topic, new RecordHeaders(), value.get).map(Some(_))
-            case None        => ZIO.succeed(None)
+            case None        => ZIO.none
           }
 
         val zipped: IO[Throwable, Option[(ConsumerGroupTopicPartition, Option[KafkaConsumerGroupOffset])]] =
@@ -272,7 +270,6 @@ object ConsumerOffsetsSource {
                   Consumer.OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest)
                 )
               )
-              _ <- ZIO.log(s"Topic partitions asigned to index {index}: " + topicPartitions.mkString(","))
               compactedConsumeResult <- KafkaConsumerUtils
                 .consumeCompactUntilEnd(
                   consumer,
@@ -289,14 +286,12 @@ object ConsumerOffsetsSource {
             )
           }
           .flatMap { case (_, ccr) =>
-            ccr.deserialize(
-              consumerOffsetsSourceConfig.consumerOffsetsTopicName,
-              ConsumerOffsetsDeserializers.keyDeserializer.mapM {
-                case Some(key) => ZIO.succeed(key)
-                case None      => ZIO.fail(new Exception("Key should not be null"))
-              },
-              ConsumerOffsetsDeserializers.valueDeserializer
-            )
+            ccr
+              .deserialize(
+                consumerOffsetsSourceConfig.consumerOffsetsTopicName,
+                ConsumerOffsetsDeserializers.keyDeserializer,
+                ConsumerOffsetsDeserializers.valueDeserializer
+              )
           }
       }
     // And consume them parallel
