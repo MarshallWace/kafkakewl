@@ -14,7 +14,7 @@ import zio.*
 import zio.kafka.consumer.{Consumer, Subscription}
 import zio.kafka.consumer.Subscription.Manual
 import zio.kafka.serde.Deserializer
-import zio.stream.ZSink
+import zio.stream.{ZSink, ZStream}
 
 import scala.annotation.targetName
 import scala.collection.mutable
@@ -88,9 +88,11 @@ object KafkaConsumerUtils {
       endOffsets <- consumer.endOffsets(topicPartitions.toSet)
       partitionMapAndRecords <- consumer
         .plainStream(subscription, keyDeserializer, valueDeserializer)
+        // Batch up values from the consumer
+        .aggregateAsyncWithin(ZSink.collectAll, Schedule.fixed(pollTimeout))
         // This will ensure that the rest of this stream executes at least once
         // prevents halting if the topic is empty.
-        .aggregateAsyncWithin(ZSink.collectAll, Schedule.fixed(pollTimeout))
+        .merge(ZStream(Chunk.empty))
         // For all topic partitions, get the current position of the consumer.
         .mapZIO(chunk =>
           ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(nextOffsets => (chunk, nextOffsets.toMap))
