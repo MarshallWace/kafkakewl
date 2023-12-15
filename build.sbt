@@ -17,6 +17,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature"
 )
 
+ThisBuild / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+
 // Have to do this for the root project and enable it for the sub-projects as well as setting the headerLicense for them.
 disablePlugins(HeaderPlugin)
 
@@ -71,7 +73,8 @@ val zio = Seq(
   "dev.zio" %% "zio-logging" % zioLoggingVersion,
   "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
   "dev.zio" %% "zio-kafka" % zioKafkaVersion,
-  "com.softwaremill.sttp.client3" %% "zio-json" % tapirZioJsonVersion % Test
+  "com.softwaremill.sttp.client3" %% "zio-json" % tapirZioJsonVersion % Test,
+  "dev.zio" %% "zio-kafka-testkit" % zioKafkaVersion % Test
 )
 
 val config = Seq(
@@ -151,8 +154,7 @@ lazy val deploy = project
     // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
     packageDoc / publishArtifact := false,
     Compile / mainClass := Some("com.mwam.kafkakewl.deploy.Main"),
-    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
-    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
+    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging
   )
 
 lazy val metrics = project
@@ -168,6 +170,5 @@ lazy val metrics = project
     // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
     packageDoc / publishArtifact := false,
     Compile / mainClass := Some("com.mwam.kafkakewl.metrics.Main"),
-    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
-    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
+    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging
   )

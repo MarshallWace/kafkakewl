@@ -86,22 +86,22 @@ object KafkaConsumerUtils {
     val subscription = Manual(topicPartitions.toSet)
     for {
       endOffsets <- consumer.endOffsets(topicPartitions.toSet)
+      // This will ensure that the topic stops once the messages up to the offsets
+      // of endOffsets have been read. Also prevents the topic consumer going into
+      // an infinite loop when there is one message.
+      stopFibre <- {
+        ZStream
+          .repeat(())
+          .schedule(Schedule.fixed(Duration.fromSeconds(1)))
+          .mapZIO(_ => ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(_.toMap).debug)
+          .takeUntil(nextOffsets => !endOffsets.exists { case (tp, endOffset) => nextOffsets.get(tp).exists(nextOffset => nextOffset < endOffset) })
+          .run(ZSink.drain) *> consumer.stopConsumption
+      }.fork
       partitionMapAndRecords <- consumer
         .plainStream(subscription, keyDeserializer, valueDeserializer)
         // Batch up values from the consumer
         .aggregateAsyncWithin(ZSink.collectAll, Schedule.fixed(pollTimeout))
-        // This will ensure that the rest of this stream executes at least once
-        // prevents halting if the topic is empty.
-        .merge(ZStream(Chunk.empty))
         // For all topic partitions, get the current position of the consumer.
-        .mapZIO(chunk =>
-          ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(nextOffsets => (chunk, nextOffsets.toMap))
-        )
-        // Check if there are any topic partitions that we haven't finished consuming.
-        .takeUntil { (_, nextOffsets) =>
-          !endOffsets.exists { case (tp, endOffset) => nextOffsets.get(tp).exists(nextOffset => nextOffset < endOffset) }
-        }
-        .map((records, _) => records)
         .runFold((mutable.Map.empty[TopicPartition, Long], mutable.ArrayBuffer.empty[ConsumerRecord[Key, Value]])) {
           case ((nextTopicPartitionOffsets, records), newRecords) =>
             for (newRecord <- newRecords) {
@@ -110,6 +110,7 @@ object KafkaConsumerUtils {
             }
             (nextTopicPartitionOffsets, records)
         }
+      _ <- stopFibre.join
 
       (partitionMap, records) = partitionMapAndRecords
 
