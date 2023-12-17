@@ -93,21 +93,18 @@ object KafkaConsumerUtils {
         ZStream
           .repeat(())
           .schedule(Schedule.fixed(Duration.fromSeconds(1)))
-          .mapZIO(_ => ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(_.toMap).debug)
+          // For all topic partitions, get the current position of the consumer.
+          .mapZIO(_ => ZIO.foreachPar(topicPartitions)(tp => consumer.position(tp).map(pos => (tp, pos))).map(_.toMap))
+          // Check to see if we have hit the end of all topic partitions
           .takeUntil(nextOffsets => !endOffsets.exists { case (tp, endOffset) => nextOffsets.get(tp).exists(nextOffset => nextOffset < endOffset) })
           .run(ZSink.drain) *> consumer.stopConsumption
       }.fork
       partitionMapAndRecords <- consumer
         .plainStream(subscription, keyDeserializer, valueDeserializer)
-        // Batch up values from the consumer
-        .aggregateAsyncWithin(ZSink.collectAll, Schedule.fixed(pollTimeout))
-        // For all topic partitions, get the current position of the consumer.
         .runFold((mutable.Map.empty[TopicPartition, Long], mutable.ArrayBuffer.empty[ConsumerRecord[Key, Value]])) {
-          case ((nextTopicPartitionOffsets, records), newRecords) =>
-            for (newRecord <- newRecords) {
-              nextTopicPartitionOffsets.update(new TopicPartition(newRecord.record.topic, newRecord.partition), newRecord.offset.offset + 1L)
-              records.addOne(newRecord.record)
-            }
+          case ((nextTopicPartitionOffsets, records), newRecord) =>
+            nextTopicPartitionOffsets.update(new TopicPartition(newRecord.record.topic, newRecord.partition), newRecord.offset.offset + 1L)
+            records.addOne(newRecord.record)
             (nextTopicPartitionOffsets, records)
         }
       _ <- stopFibre.join

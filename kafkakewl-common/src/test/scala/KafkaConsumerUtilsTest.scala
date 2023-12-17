@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import KafkaConsumerUtilsTest.test
 import com.mwam.kafkakewl.common.kafka.KafkaConsumerUtils
 import org.apache.kafka.common.TopicPartition
 import zio.*
-import zio.kafka.consumer.{Consumer, ConsumerSettings}
+import zio.kafka.consumer.{Consumer}
+import zio.kafka.producer.{Producer}
 import zio.kafka.serde.{Deserializer}
-import zio.kafka.testkit.KafkaTestUtils.{consumerSettings, minimalConsumer, produceMany, producer}
+import zio.kafka.testkit.KafkaTestUtils.{consumer, produceMany, producer}
 import zio.kafka.testkit.*
 import zio.test.*
 
@@ -29,22 +31,23 @@ object KafkaConsumerUtilsTest extends ZIOSpecWithKafka with KafkaRandom {
           recordsAndTpos <- KafkaConsumerUtils
             .consumeUntilEnd(cons, tps, Deserializer.string, Deserializer.string)
 
-          (_, records) = recordsAndTpos
+          (topicPartitionOffsets, records) = recordsAndTpos
           _ <- ZIO.debug(s"Number of records: ${records.length}")
-        } yield assertTrue(records.length == 5)
+          _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
+        } yield assertTrue(records.length == 5, topicPartitionOffsets.values.sum >= 5L)
       },
       test("empty topic") {
         for {
           topic <- randomTopic
           cons <- ZIO.service[Consumer]
           tps <- cons.partitionsFor(topic).map(tpis => tpis.map(tpi => new TopicPartition(tpi.topic(), tpi.partition())))
-
           recordsAndTpos <- KafkaConsumerUtils
             .consumeUntilEnd(cons, tps, Deserializer.string, Deserializer.string)
-
-          (_, records) = recordsAndTpos
+          (topicPartitionOffsets, records) = recordsAndTpos
+          _ <- cons.stopConsumption
           _ <- ZIO.debug(s"Number of records: ${records.length}")
-        } yield assertTrue(records.isEmpty)
+          _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
+        } yield assertTrue(records.isEmpty, topicPartitionOffsets.values.sum >= 0L)
       },
       test("large topic") {
         val kvs: List[(String, String)] = (1 to 1000000).toList.map(i => (s"key-$i", s"msg-$i"))
@@ -57,15 +60,16 @@ object KafkaConsumerUtilsTest extends ZIOSpecWithKafka with KafkaRandom {
           recordsAndTpos <- KafkaConsumerUtils
             .consumeUntilEnd(cons, tps, Deserializer.string, Deserializer.string)
 
-          (_, records) = recordsAndTpos
+          (topicPartitionOffsets, records) = recordsAndTpos
           _ <- ZIO.debug(s"Number of records: ${records.length}")
-        } yield assertTrue(records.length == 1000000)
+          _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
+        } yield assertTrue(records.length == 1000000, topicPartitionOffsets.values.sum >= 1000000L)
       }
     )
       .provideSome[Kafka](
         producer,
-        minimalConsumer(),
-        ZLayer.fromZIO(randomClient.zip(randomGroup).flatMap((c, g) => consumerSettings(c, Some(g))))
+        ZLayer.fromZIOEnvironment(randomClient.zip(randomGroup).flatMap((c, g) => consumer(c, Some(g)).build)),
+        Scope.default
       )
       .provideSomeShared(
         Kafka.embedded
