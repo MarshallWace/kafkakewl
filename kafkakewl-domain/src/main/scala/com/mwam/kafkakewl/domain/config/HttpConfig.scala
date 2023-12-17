@@ -12,5 +12,3 @@ final case class HttpConfig(
     port: Int = 8080,
     timeout: Duration = Duration.fromSeconds(10)
 )
-
-case class Timeout(seconds: Int)
