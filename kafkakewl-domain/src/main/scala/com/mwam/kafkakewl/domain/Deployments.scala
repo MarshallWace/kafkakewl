@@ -77,12 +77,14 @@ object DeploymentsFailure {
   final case class Validation(validationFailed: Seq[String]) extends PostDeploymentsFailure
   final case class Deployment(deploymentFailed: Seq[String]) extends PostDeploymentsFailure
   final case class Persistence(persistFailed: Seq[String]) extends PostDeploymentsFailure
+  final case class Timeout(timeout: String) extends PostDeploymentsFailure with QueryDeploymentsFailure
 
   def notFound(notFound: String*): NotFound = NotFound(notFound)
   def authorization(throwable: Throwable): Authorization = Authorization(errors(throwable))
   def validation(errors: NonEmptyChunk[String]): Validation = Validation(errors)
   def deployment(throwable: Throwable): Deployment = Deployment(errors(throwable))
   def persistence(throwable: Throwable): Persistence = Persistence(errors(throwable))
+  def timeout: Timeout = Timeout("Request timed out. Please try again later.")
 
   private def errors(throwable: Throwable): Seq[String] = Seq(throwable.getMessage)
 }

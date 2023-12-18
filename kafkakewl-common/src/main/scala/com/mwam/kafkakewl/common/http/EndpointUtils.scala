@@ -10,6 +10,7 @@ import sttp.model.StatusCode
 import sttp.tapir.*
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.annotations.*
+import zio.{Duration, ZIO}
 import zio.json.{JsonDecoder, JsonEncoder}
 
 trait EndpointUtils {
@@ -35,6 +36,10 @@ object EndpointUtils {
     stringBodyUtf8AnyFormat(zioYamlCodec.mapDecode(jsonDecode.rawDecode)(jsonDecode.encode))
   }
 
+  def timeout[A, E, B, R](timeout: Duration, exception: E)(f: A => ZIO[Any, E, B]): A => ZIO[R, E, B] = { a =>
+    f(a).timeoutFail(exception)(timeout)
+  }
+
   private val zioYamlCodec: Codec[String, String, TextPlain] =
     sttp.tapir.Codec.anyString[String, TextPlain](CodecFormat.TextPlain()) { s =>
       io.circe.yaml.parser.parse(s).map(_.spaces2) match {
@@ -42,6 +47,7 @@ object EndpointUtils {
         case Right(jsonString) => DecodeResult.Value(jsonString)
       }
     } { _ => throw UnsupportedOperationException("Encoding as YAML is unsupported") }
+
 }
 
 case class ErrorResponse(@jsonbody message: String, @statusCode statusCode: StatusCode)

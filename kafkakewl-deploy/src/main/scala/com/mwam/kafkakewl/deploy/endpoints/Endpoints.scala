@@ -30,7 +30,9 @@ class Endpoints(
   val endpoints: List[ZServerEndpoint[Any, Any]] = {
     val api = deploymentServerEndpoints.endpoints
     val docs = docsEndpoints(api)
-    val metrics = List(metricsEndpoint.zServerLogic[Any](_ => getMetrics))
+    val metrics = List(
+      metricsEndpoint.zServerLogic[Any](_ => getMetrics)
+    )
     val health =
       List(livenessEndpoint, readinessEndpoint, startupProbeEndpoint)
         .map(
@@ -43,11 +45,9 @@ class Endpoints(
     .fromServerEndpoints[Task](apiEndpoints, "kafkakewl-deploy", "1.0.0")
 
   // Regex to remove timestamp from the end of each metric. This is to fix the staleness issue in prometheus.
-  private def getMetrics: ZIO[Any, Unit, String] =
-    prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
+  private def getMetrics: ZIO[Any, Unit, String] = prometheusPublisher.get.map(_.replaceAll("[0-9]+\n", "\n"))
 }
 
 object Endpoints {
-  val live: ZLayer[DeploymentsServerEndpoints & PrometheusPublisher, Nothing, Endpoints] =
-    ZLayer.fromFunction(Endpoints(_, _))
+  val live: ZLayer[DeploymentsServerEndpoints & PrometheusPublisher, Nothing, Endpoints] = ZLayer.fromFunction(Endpoints(_, _))
 }

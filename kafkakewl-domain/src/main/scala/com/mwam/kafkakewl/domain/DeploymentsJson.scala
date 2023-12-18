@@ -31,4 +31,6 @@ object DeploymentsJson {
   given JsonDecoder[DeploymentsFailure.Deployment] = DeriveJsonDecoder.gen[DeploymentsFailure.Deployment]
   given JsonEncoder[DeploymentsFailure.Persistence] = DeriveJsonEncoder.gen[DeploymentsFailure.Persistence]
   given JsonDecoder[DeploymentsFailure.Persistence] = DeriveJsonDecoder.gen[DeploymentsFailure.Persistence]
+  given JsonEncoder[DeploymentsFailure.Timeout] = DeriveJsonEncoder.gen[DeploymentsFailure.Timeout]
+  given JsonDecoder[DeploymentsFailure.Timeout] = DeriveJsonDecoder.gen[DeploymentsFailure.Timeout]
 }
