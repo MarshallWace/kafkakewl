@@ -24,8 +24,6 @@ import zio.kafka.admin.*
 import zio.kafka.consumer.Consumer.AutoOffsetStrategy
 import zio.stream.*
 
-import scala.collection.mutable.ListBuffer
-
 final case class BatchMessageEnvelope[Payload](
     batchSize: Int,
     indexInBatch: Int,
