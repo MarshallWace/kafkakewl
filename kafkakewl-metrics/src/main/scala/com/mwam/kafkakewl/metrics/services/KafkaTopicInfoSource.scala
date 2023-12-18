@@ -19,6 +19,7 @@ class KafkaTopicInfoSource(
     private val hub: Hub[KafkaTopicPartitionInfoChanges]
 ) {
   def subscribe(): URIO[Scope, Dequeue[KafkaTopicPartitionInfoChanges]] = hub.subscribe
+  def subscribeStream(): ZStream[Any, Nothing, KafkaTopicPartitionInfoChanges] = ZStream.fromHub(hub)
   def startPublishing(): UIO[Unit] = for {
     topicInfoChangesFiber <- topicInfoChangesStream
       .runScoped(ZSink.foreach(hub.publish))
