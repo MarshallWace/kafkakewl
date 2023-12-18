@@ -75,8 +75,7 @@ object KafkaConsumerUtilsTest extends ZIOSpecWithKafka with KafkaRandom {
           _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
         } yield assertTrue(records.length == 1000000, topicPartitionOffsets.values.sum >= 1000000L)
       },
-      test("rolledback query") {
-
+      test("rolledback query skips offsets") {
         for {
           topic <- randomTopic
           group <- randomGroup
@@ -119,7 +118,45 @@ object KafkaConsumerUtilsTest extends ZIOSpecWithKafka with KafkaRandom {
           _ <- ZIO.debug(s"Number of records: ${records.length}")
           _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
         } yield assertTrue(records.length == 20, topicPartitionOffsets.values.sum >= 70L)
+      },
+      test("rolledback query terminates") {
+        for {
+          topic <- randomTopic
+          group <- randomGroup
+          client <- randomClient
+          kvs = (1 to 100).toList.map(i => new ProducerRecord(topic, s"key-$i", s"msg-$i"))
 
+          _ <- ZIO.scoped {
+            TransactionalProducer.createTransaction.tap { t =>
+              ZIO.foreach(kvs.take(10))(t.produce(_, Serde.string, Serde.string, None))
+            }
+          }
+          _ <- ZIO
+            .scoped {
+              TransactionalProducer.createTransaction
+                .flatMap { t =>
+                  ZIO.foreachDiscard(kvs.take(50))(t.produce(_, Serde.string, Serde.string, None)) *> t.abort
+                }
+            }
+            .catchSome { case UserInitiatedAbort =>
+              ZIO.unit
+            }
+          recordsAndTpos <- ZIO.scoped {
+            for {
+              settings <- transactionalConsumerSettings(group, client)
+              cons <- Consumer.make(settings)
+              tps <- cons.partitionsFor(topic).map(tpis => tpis.map(tpi => new TopicPartition(tpi.topic(), tpi.partition())))
+
+              recordsAndTpos <- KafkaConsumerUtils
+                .consumeUntilEnd(cons, tps, Serde.string, Serde.string)
+
+            } yield recordsAndTpos
+          }
+
+          (topicPartitionOffsets, records) = recordsAndTpos
+          _ <- ZIO.debug(s"Number of records: ${records.length}")
+          _ <- ZIO.debug(s"Offsets: ${topicPartitionOffsets}")
+        } yield assertTrue(records.length == 10, topicPartitionOffsets.values.sum >= 10L)
       }
     )
       .provideSome[Kafka](
