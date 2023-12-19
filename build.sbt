@@ -1,27 +1,35 @@
 val orgName = "Marshall Wace"
 val year = 2023
 
-ThisBuild / scalaVersion        := "3.3.1"
-ThisBuild / version             := "0.1.0-SNAPSHOT"
-ThisBuild / organization        := "com.mwam.kafkakewl"
-ThisBuild / organizationName    := orgName
-ThisBuild / startYear           := Some(year)
+ThisBuild / scalaVersion := "3.3.0"
+ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / organization := "com.mwam.kafkakewl"
+ThisBuild / organizationName := orgName
+ThisBuild / startYear := Some(year)
 
-ThisBuild / scalacOptions       ++= Seq(
-  "-Xmax-inlines", "64",
+ThisBuild / scalacOptions ++= Seq(
+  "-Xmax-inlines",
+  "64",
   "-Yretain-trees", // so that zio-json supports default values
-  "-Wunused:imports", "-Wunused:params", "-deprecation", "-feature"
+  "-Wunused:imports",
+  "-Wunused:params",
+  "-deprecation",
+  "-feature"
 )
+
+ThisBuild / testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
 // Have to do this for the root project and enable it for the sub-projects as well as setting the headerLicense for them.
 disablePlugins(HeaderPlugin)
 
-val license = Some(HeaderLicense.Custom(
-  s"""SPDX-FileCopyrightText: $year $orgName <opensource@mwam.com>
+val license = Some(
+  HeaderLicense.Custom(
+    s"""SPDX-FileCopyrightText: $year $orgName <opensource@mwam.com>
      |
      |SPDX-License-Identifier: Apache-2.0
      |""".stripMargin
-))
+  )
+)
 
 val logbackVersion = "1.4.11"
 val logbackContribJsonVersion = "0.1.5"
@@ -44,7 +52,7 @@ val tapir = Seq(
   "com.softwaremill.sttp.tapir" %% "tapir-zio-http-server" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-json-zio" % tapirVersion,
   "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % tapirVersion,
-  "com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % tapirVersion,
+  "com.softwaremill.sttp.tapir" %% "tapir-zio-metrics" % tapirVersion
 )
 
 val tapirCore = Seq(
@@ -65,7 +73,8 @@ val zio = Seq(
   "dev.zio" %% "zio-logging" % zioLoggingVersion,
   "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
   "dev.zio" %% "zio-kafka" % zioKafkaVersion,
-  "com.softwaremill.sttp.client3" %% "zio-json" % tapirZioJsonVersion % Test
+  "com.softwaremill.sttp.client3" %% "zio-json" % tapirZioJsonVersion % Test,
+  "dev.zio" %% "zio-kafka-testkit" % zioKafkaVersion % Test
 )
 
 val config = Seq(
@@ -75,7 +84,7 @@ val config = Seq(
 )
 
 val circeYaml = Seq(
-    "io.circe" %% "circe-yaml" % circeYamlVersion
+  "io.circe" %% "circe-yaml" % circeYamlVersion
 )
 
 val kafkaClient = Seq(
@@ -95,7 +104,7 @@ val telemetry = Seq(
   "io.opentelemetry" % "opentelemetry-extension-trace-propagators" % openTelemetryVersion,
   "io.opentelemetry" % "opentelemetry-semconv" % s"$openTelemetryVersion-alpha",
   "io.opentelemetry" % "opentelemetry-sdk-extension-autoconfigure" % openTelemetryVersion,
-  "io.grpc" % "grpc-netty-shaded" % openTelemetryGrpcVersion,
+  "io.grpc" % "grpc-netty-shaded" % openTelemetryGrpcVersion
 )
 
 val tests = Seq(
@@ -145,8 +154,7 @@ lazy val deploy = project
     // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
     packageDoc / publishArtifact := false,
     Compile / mainClass := Some("com.mwam.kafkakewl.deploy.Main"),
-    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
-    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
+    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging
   )
 
 lazy val metrics = project
@@ -162,6 +170,5 @@ lazy val metrics = project
     // disabling scalaDoc fixes it (it's needed because stage wants to generate scalaDoc)
     packageDoc / publishArtifact := false,
     Compile / mainClass := Some("com.mwam.kafkakewl.metrics.Main"),
-    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging,
-    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))
+    libraryDependencies ++= tapir ++ tapirCore ++ config ++ zio ++ tests ++ logging
   )
