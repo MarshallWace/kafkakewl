@@ -13,6 +13,8 @@ import zio.*
 import zio.kafka.consumer.Consumer
 import zio.stream.*
 
+import java.time.Instant
+
 class KafkaTopicInfoSource(
     private val scope: Scope, // TODO This is slightly dangerous, the scope must not be used after it's closed
     private val topicInfoChangesStream: ZStream[Any, Throwable, KafkaTopicPartitionInfoChanges],
@@ -55,11 +57,12 @@ object KafkaTopicInfoSource {
       beginningEndOffsets <- consumer.beginningOffsets(topicPartitions, timeout) zip consumer.endOffsets(topicPartitions, timeout)
     } yield {
       val (beginningOffsets, endOffsets) = beginningEndOffsets
+      val timestamp = Instant.now()
       // TODO should indicate if there are topics for which we don't have either beginning or end-offsets or both
       (beginningOffsets.keySet intersect endOffsets.keySet).view.map { tp =>
         (
           KafkaTopicPartition(tp),
-          KafkaTopicPartitionInfo(beginningOffsets(tp), endOffsets(tp))
+          KafkaTopicPartitionInfo(beginningOffsets(tp), endOffsets(tp), timestamp)
         )
       }.toMap
     }).tapError(t => ZIO.logError(s"failed to get the topics' beginning and end offsets: ${t.getMessage}"))
