@@ -7,22 +7,22 @@
 package com.mwam.kafkakewl.common.persistence
 
 import com.mwam.kafkakewl.common.kafka.KafkaClientConfigExtensions.*
-import com.mwam.kafkakewl.common.kafka.KafkaConsumerExtensions.*
 import com.mwam.kafkakewl.common.kafka.AdminClientExtensions.*
 import com.mwam.kafkakewl.common.kafka.KafkaConsumerUtils
 import com.mwam.kafkakewl.domain.*
 import com.mwam.kafkakewl.domain.DeploymentsJson.given
 import com.mwam.kafkakewl.domain.config.KafkaClientConfig
-import org.apache.kafka.clients.consumer.Consumer
+import zio.kafka.consumer.Consumer
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.config.TopicConfig
 import zio.*
 import zio.json.*
 import zio.kafka.producer.*
-import zio.kafka.serde.Serde
+import zio.kafka.consumer.*
+import zio.kafka.serde.{Deserializer, Serde}
 import zio.kafka.admin.*
+import zio.kafka.consumer.Consumer.AutoOffsetStrategy
 import zio.stream.*
-
-import scala.collection.mutable.ListBuffer
 
 final case class BatchMessageEnvelope[Payload](
     batchSize: Int,
@@ -58,7 +58,11 @@ class KafkaPersistentStore(
     initializeIfNeeded *>
       ZIO.scoped {
         for {
-          consumer <- KafkaConsumerUtils.kafkaConsumerStringStringZIO(kafkaClientConfig)
+          consumer <- Consumer.make(
+            ConsumerSettings(kafkaClientConfig.brokersList, kafkaClientConfig.additionalConfig).withOffsetRetrieval(
+              Consumer.OffsetRetrieval.Auto(AutoOffsetStrategy.Earliest)
+            )
+          )
           _ <- ZIO.logInfo(s"loading the topologies from the $topicName kafka topic")
           deserializedTopologiesWithDuration <- consumeUntilEnd(consumer, topicName).timed
           (duration, deserializedTopologies) = deserializedTopologiesWithDuration
@@ -189,18 +193,30 @@ class KafkaPersistentStore(
     } yield ()
   }
 
-  private def consumeUntilEnd(consumer: Consumer[String, String], topic: String): Task[Map[TopologyId, Either[String, TopologyDeployment]]] =
-    ZIO.attempt {
-      val messages = new ListBuffer[(String, String)]()
-      val topicPartitions = consumer.topicPartitionsOf(topic)
-      // keeping the last TopologyDeployments only
-      KafkaConsumerUtils.consumeUntilEnd(consumer, topicPartitions) { _.forEach(cr => messages += (cr.key -> cr.value)) }
+  private def consumeUntilEnd(consumer: Consumer, topic: String): Task[Map[TopologyId, Either[String, TopologyDeployment]]] = {
 
-      messages
-        // Here we don't care about the message batch, just extract the payload
-        .map { case (key, value) => (TopologyId(key), value.fromJson[BatchMessageEnvelope[TopologyDeployment]].map(_.payload)) }.toMap
-    }
+    for {
+      topicPartitions <- consumer.partitionsFor(topic)
+      partitionMapAndRecords <- KafkaConsumerUtils.consumeUntilEnd(
+        consumer,
+        topicPartitions.map(tpi => new TopicPartition(tpi.topic(), tpi.partition())),
+        Deserializer.string,
+        Deserializer.string
+      )
+      (partitionMap, records) = partitionMapAndRecords
 
+      topologyMap = records
+        .foldLeft(collection.mutable.Map.empty[String, String]) {
+          case (map, record) => {
+            map.update(record.key(), record.value())
+            map
+          }
+        }
+        .map { case (key, value) => (TopologyId(key), value.fromJson[BatchMessageEnvelope[TopologyDeployment]].map(_.payload)) }
+        .toMap
+
+    } yield topologyMap
+  }
   private def topicConfig = kafkaPersistentStoreConfig.topic
   private def topicName = topicConfig.name
   private val defaultKafkaTopicConfig = Map(TopicConfig.RETENTION_MS_CONFIG -> "-1")

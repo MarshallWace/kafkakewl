@@ -58,7 +58,6 @@ class TopologyDeploymentsService private (
       } yield DeploymentsSuccess(
         topologyDeployments
           .map((tid, td) => (tid, td.status))
-          .toMap
       )
     }
 

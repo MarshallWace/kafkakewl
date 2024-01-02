@@ -13,4 +13,8 @@ object FailuresJson {
   given JsonDecoder[Failures.NotFound] = DeriveJsonDecoder.gen[Failures.NotFound]
   given JsonEncoder[Failures.Authorization] = DeriveJsonEncoder.gen[Failures.Authorization]
   given JsonDecoder[Failures.Authorization] = DeriveJsonDecoder.gen[Failures.Authorization]
+
+  given JsonEncoder[Failures.Timeout] = DeriveJsonEncoder.gen[Failures.Timeout]
+
+  given JsonDecoder[Failures.Timeout] = DeriveJsonDecoder.gen[Failures.Timeout]
 }

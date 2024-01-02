@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.metrics.domain
 
 import org.apache.kafka.common.TopicPartition
 
+import java.time.Instant
 import scala.collection.immutable.SortedMap
 
 final case class KafkaTopicPartition(topic: String, partition: Int)
@@ -16,7 +17,7 @@ object KafkaTopicPartition {
   def apply(topicPartition: TopicPartition) = new KafkaTopicPartition(topicPartition.topic, topicPartition.partition)
 }
 
-final case class KafkaTopicPartitionInfo(beginningOffset: Long, endOffset: Long)
+final case class KafkaTopicPartitionInfo(beginningOffset: Long, endOffset: Long, lastOffsetTimestamp: Instant)
 
 type KafkaSingleTopicPartitionInfos = SortedMap[Int, KafkaTopicPartitionInfo]
 
@@ -38,7 +39,9 @@ final case class KafkaTopicPartitionInfoChanges(
 object KafkaTopicPartitionInfoExtensions {
   extension (topicPartitionInfos: Map[KafkaTopicPartition, KafkaTopicPartitionInfo]) {
     def diff(newTopicPartitionInfos: Map[KafkaTopicPartition, KafkaTopicPartitionInfo]): KafkaTopicPartitionInfoChanges = {
-      val addedOrUpdated = newTopicPartitionInfos.filter { case (tp, tpi) => !topicPartitionInfos.get(tp).contains(tpi) }
+      val addedOrUpdated = newTopicPartitionInfos.filter { case (tp, tpi) =>
+        !topicPartitionInfos.get(tp).exists(tp1 => tpi.beginningOffset == tp1.beginningOffset && tpi.endOffset == tp1.endOffset)
+      }
       val removed = topicPartitionInfos.keySet diff newTopicPartitionInfos.keySet
 
       KafkaTopicPartitionInfoChanges(addedOrUpdated, removed)

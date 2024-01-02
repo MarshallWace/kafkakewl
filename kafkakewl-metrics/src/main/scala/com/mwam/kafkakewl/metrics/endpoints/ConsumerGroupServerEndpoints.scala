@@ -22,7 +22,7 @@ class ConsumerGroupServerEndpoints(
 
   val endpoints: List[ZServerEndpoint[Any, Any]] = List(
     consumerGroupEndpoints.getGroupsEndpoint.zServerLogicWithTracing(_ => getConsumerGroups),
-    consumerGroupEndpoints.getGroupEndpoint.zServerLogicWithTracing(group => getConsumerGroup(group))
+    consumerGroupEndpoints.getGroupEndpoint.zServerLogicWithTracing(getConsumerGroup)
   )
 
   private def getConsumerGroups: ZIO[Any, QueryFailure, Seq[String]] = consumerGroupInfoCache.getConsumerGroups
