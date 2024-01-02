@@ -56,10 +56,14 @@ object Main extends ZIOAppDefault {
 
     (for
       topicInfoSource <- ZIO.service[KafkaTopicInfoSource]
-      _ <- ZIO.service[HighOffsetMetricsExposer]
+
       _ <- topicInfoSource.startPublishing()
       consumerOffsetsSource <- ZIO.service[ConsumerOffsetsSource]
       _ <- consumerOffsetsSource.startPublishing()
+
+      // We need to request this service if we provide it.
+      // This operation does not do anything directly.
+      _ <- ZIO.service[HighOffsetMetricsExposer]
 
       endpoints <- ZIO.service[Endpoints]
       httpApp = ZioHttpInterpreter(options).toHttp(endpoints.endpoints)
