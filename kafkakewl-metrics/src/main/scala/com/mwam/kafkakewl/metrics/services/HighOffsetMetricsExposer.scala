@@ -8,80 +8,117 @@ package com.mwam.kafkakewl.metrics.services
 
 import com.mwam.kafkakewl.metrics.MainConfig
 import com.mwam.kafkakewl.metrics.domain.{KafkaTopicPartition, KafkaTopicPartitionInfo, KafkaTopicPartitionInfoChanges}
-import zio.kafka.consumer.Consumer
-import zio.{Duration, Fiber, Schedule, Task, UIO, URIO, ZIO, ZLayer}
-import zio.stream.{ZSink, ZStream}
+import zio.{UIO, ZIO, ZLayer}
 import zio.metrics.*
 import zio.metrics.Metric.Counter
 
 import scala.collection.immutable.Map
 
-object Helper {
-  def newTopicMetric(topic: String): Metric.Counter[Long] = Metric.counter("kafkakewl_vnext_topic_high_offset").tagged("topic", topic)
-  def newPartitionMetric(topic: String, partition: Int): Metric.Counter[Long] =
-    Metric.counter("kafkakewl_vnext_topic_partition_high_offset").tagged("topic", topic).tagged("partition", partition.toString)
+final case class MetricUpdate(metric: Metric.Counter[Long], increment: Long) {
+  def applyChanges(): UIO[Unit] = {
+    metric.incrementBy(increment)
+  }
 }
 
-case class MetricMap(metricMap: Map[String, (Map[Int, (Metric.Counter[Long], Long)], Metric.Counter[Long])]) {
+final case class PartitionMetrics(partitionMetrics: Map[Int, (Option[Metric.Counter[Long]], Long)]) {
+  def updateWithNewOffset(
+      newOffsets: Map[KafkaTopicPartition, KafkaTopicPartitionInfo],
+      config: TopicsConfig
+  ): (PartitionMetrics, List[MetricUpdate], Long) = {
+    var totalChange = 0L
+    var metricUpdates = List.empty[MetricUpdate]
+    var newPartitionMap = partitionMetrics
 
-  def updateWithTopicParitionChanges(
+    for ((topicPartition, topicPartitionInfo) <- newOffsets) {
+      newPartitionMap = newPartitionMap.updatedWith(topicPartition.partition) {
+        case Some((counter, lastValue)) =>
+          val increase = topicPartitionInfo.endOffset - lastValue
+          totalChange = totalChange + increase
+          if (config.perPartitionHighOffsetMetrics) {
+            metricUpdates = MetricUpdate(counter.get, increase) +: metricUpdates
+          }
+          Some((counter, topicPartitionInfo.endOffset))
+        case None =>
+          totalChange = totalChange + topicPartitionInfo.endOffset
+
+          val counter = if (config.perPartitionHighOffsetMetrics) {
+            val counter = config.newPartitionHighOffsetMetric(topicPartition.topic, topicPartition.partition)
+            metricUpdates = MetricUpdate(counter, topicPartitionInfo.endOffset) +: metricUpdates
+            Some(counter)
+          } else {
+            None
+          }
+          Some((counter, topicPartitionInfo.endOffset))
+      }
+    }
+
+    (PartitionMetrics(newPartitionMap), metricUpdates, totalChange)
+  }
+
+  def removePartitions(topicPartitions: Set[KafkaTopicPartition], config: TopicsConfig): (PartitionMetrics, List[MetricUpdate], Long) = {
+    var totalChange = 0L
+    var metricUpdates = List.empty[MetricUpdate]
+    var newPartitionMap = partitionMetrics
+
+    for (topicPartition <- topicPartitions) {
+      newPartitionMap = newPartitionMap.get(topicPartition.partition) match {
+        case Some((counter, lastValue)) =>
+          totalChange = totalChange - lastValue
+          if (config.perPartitionHighOffsetMetrics) {
+            metricUpdates = MetricUpdate(counter.get, -lastValue) +: metricUpdates
+          }
+          newPartitionMap.removed(topicPartition.partition)
+
+        case None =>
+          newPartitionMap
+
+      }
+    }
+
+    (PartitionMetrics(newPartitionMap), metricUpdates, totalChange)
+  }
+
+  def nonEmpty: Boolean = partitionMetrics.nonEmpty
+}
+
+object PartitionMetrics {
+  def empty: PartitionMetrics = PartitionMetrics(Map.empty[Int, (Option[Metric.Counter[Long]], Long)])
+}
+
+final case class MetricMap(metricMap: Map[String, (PartitionMetrics, Metric.Counter[Long])]) {
+
+  def updateWithTopicPartitionChanges(
       changes: KafkaTopicPartitionInfoChanges,
-      config: MetricExposerConfig
-  ): (MetricMap, List[(Metric.Counter[Long], Long)]) = {
-    val addedOrUpdated = changes.addedOrUpdated
+      config: TopicsConfig
+  ): (MetricMap, List[MetricUpdate]) = {
+    val addedOrUpdated = changes.addedOrUpdated.groupBy(_._1.topic)
     val removed = changes.removed
     var newMetricMap = metricMap
-    var metricUpdates: List[(Metric.Counter[Long], Long)] = List.empty
-    // Add new metrics and update stale ones
-    for ((topicPartition, partitionInfo) <- addedOrUpdated) {
+    var metricUpdates: List[MetricUpdate] = List.empty
 
-      newMetricMap = newMetricMap.updatedWith(topicPartition.topic) {
-        case Some((topicMap: Map[Int, (Metric.Counter[Long], Long)], aggregateCounter: Metric.Counter[Long])) =>
-          val newTopicMap = topicMap.updatedWith(topicPartition.partition) {
-            case Some((counter, lastValue)) =>
-              val increase = partitionInfo.endOffset - lastValue
-              metricUpdates = metricUpdates :+ (aggregateCounter, increase)
-              if (config.perPartitionMetrics) {
-                metricUpdates = metricUpdates :+ (counter, increase)
-              }
-              Some((counter, partitionInfo.endOffset))
-            case None =>
-              val counter = Helper.newPartitionMetric(topicPartition.topic, topicPartition.partition)
-              metricUpdates = metricUpdates :+ (aggregateCounter, partitionInfo.endOffset)
-              if (config.perPartitionMetrics) {
-                metricUpdates = metricUpdates :+ (counter, partitionInfo.endOffset)
-              }
-              Some((counter, partitionInfo.endOffset))
-          }
-          Some((newTopicMap, aggregateCounter))
-        case None =>
-          val counter = Helper.newPartitionMetric(topicPartition.topic, topicPartition.partition)
-          val newTopicMap = Map.newBuilder
-            .addOne(
-              topicPartition.partition,
-              (counter, partitionInfo.endOffset)
-            )
-            .result()
-          val aggregateCounter = Helper.newTopicMetric(topicPartition.topic)
-          metricUpdates = metricUpdates :+ (aggregateCounter, partitionInfo.endOffset)
-          if (config.perPartitionMetrics) {
-            metricUpdates = metricUpdates :+ (counter, partitionInfo.endOffset)
-          }
-          Some((newTopicMap, aggregateCounter))
+    // Add new metrics and update stale ones
+    for ((topic, topicPartitionChanges) <- addedOrUpdated) {
+      newMetricMap = newMetricMap.updatedWith(topic) { partitionMetricsAndCounter =>
+        val (oldPartitionMetrics, aggregateCounter) =
+          partitionMetricsAndCounter.getOrElse((PartitionMetrics.empty, config.newTopicHighOffsetMetric(topic)))
+
+        val (newPartitionMetrics, partitionMetricUpdates, totalIncrease) = oldPartitionMetrics.updateWithNewOffset(topicPartitionChanges, config)
+        metricUpdates = partitionMetricUpdates ++ metricUpdates
+        metricUpdates = MetricUpdate(aggregateCounter, totalIncrease) +: metricUpdates
+
+        Some((newPartitionMetrics, aggregateCounter))
       }
     }
 
     // Update the metric map to reflect removals
-    for (topicPartition <- removed) {
-      val topic = topicPartition.topic
-      val partition = topicPartition.partition
+    for ((topic, topicPartitions) <- removed.groupBy(_.topic)) {
 
       newMetricMap = newMetricMap.updatedWith(topic) {
-        case Some((map: Map[Int, (Metric.Counter[Long], Long)], aggregateCounter: Metric.Counter[Long])) =>
-          val oldMetricValue = map.get(partition).map(_._2).getOrElse(0L)
-          val newMap = map.removed(partition)
-          metricUpdates = metricUpdates :+ (aggregateCounter, -oldMetricValue)
-          Some((newMap, aggregateCounter))
+        case Some((map: PartitionMetrics, aggregateCounter: Metric.Counter[Long])) =>
+          val (newPartitionMetrics, partitionMetricUpdates, totalIncrease) = map.removePartitions(topicPartitions, config)
+          metricUpdates = partitionMetricUpdates ++ metricUpdates
+          metricUpdates = MetricUpdate(aggregateCounter, totalIncrease) +: metricUpdates
+          Some((newPartitionMetrics, aggregateCounter))
         case None => None
       }
     }
@@ -93,29 +130,40 @@ case class MetricMap(metricMap: Map[String, (Map[Int, (Metric.Counter[Long], Lon
   }
 }
 
+class HighOffsetMetricsExposer
+
 object HighOffsetMetricsExposer {
-  def startPublishing(
-      topicInfos: ZStream[MetricExposerConfig, Nothing, KafkaTopicPartitionInfoChanges]
-  ): URIO[MetricExposerConfig, Fiber.Runtime[Nothing, Unit]] =
-    for {
-      config <- ZIO.service[MetricExposerConfig]
-      fibre <- topicInfos
-        .runFoldZIO(MetricMap(Map.empty)) { (metricMap: MetricMap, topicPartitionInfoChanges: KafkaTopicPartitionInfoChanges) =>
-          val (newMetricMap, metricUpdates) = metricMap.updateWithTopicParitionChanges(topicPartitionInfoChanges, config)
-          ZIO.foreachDiscard(metricUpdates)((metric, increase) => metric.update(increase)).as(newMetricMap)
-        }
-        .unit
-        .fork
-    } yield fibre
+  def live: ZLayer[KafkaTopicInfoSource & TopicsConfig, Nothing, HighOffsetMetricsExposer] =
+    ZLayer.scoped {
+      for {
+        topicInfoService <- ZIO.service[KafkaTopicInfoSource]
+        topicInfoStream = topicInfoService.subscribeStream()
+        config <- ZIO.service[TopicsConfig]
+
+        offsetMetricFibre <- topicInfoStream
+          .runFoldZIO(MetricMap(Map.empty)) { (metricMap: MetricMap, topicPartitionInfoChanges: KafkaTopicPartitionInfoChanges) =>
+            val (newMetricMap, metricUpdates) = metricMap.updateWithTopicPartitionChanges(topicPartitionInfoChanges, config)
+            ZIO.foreachDiscard(metricUpdates)(_.applyChanges()).as(newMetricMap)
+          }
+          .unit
+          .fork
+        _ <- ZIO.addFinalizer(offsetMetricFibre.interrupt)
+      } yield HighOffsetMetricsExposer()
+    }
 }
 
-case class MetricExposerConfig(perPartitionMetrics: Boolean = true)
+final case class TopicsConfig(perPartitionHighOffsetMetrics: Boolean = false, metricNamePrefix: String = "kafkakewl_vnext_metrics_") {
+  def newTopicHighOffsetMetric(topic: String): Metric.Counter[Long] = Metric.counter(metricNamePrefix + "topic_high_offset").tagged("topic", topic)
 
-object MetricExposerConfig {
-  val live: ZLayer[MainConfig, Nothing, MetricExposerConfig] =
+  def newPartitionHighOffsetMetric(topic: String, partition: Int): Metric.Counter[Long] =
+    Metric.counter(metricNamePrefix + "topic_partition_high_offset").tagged("topic", topic).tagged("partition", partition.toString)
+}
+
+object TopicsConfig {
+  val live: ZLayer[MainConfig, Nothing, TopicsConfig] =
     ZLayer.fromZIO {
       for {
         mainConfig <- ZIO.service[MainConfig]
-      } yield mainConfig.metricsExposer
+      } yield mainConfig.topics
     }
 }

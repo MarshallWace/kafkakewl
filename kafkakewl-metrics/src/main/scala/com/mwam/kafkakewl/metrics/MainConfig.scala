@@ -7,7 +7,7 @@
 package com.mwam.kafkakewl.metrics
 
 import com.mwam.kafkakewl.domain.config.{HttpConfig, KafkaClusterConfig}
-import com.mwam.kafkakewl.metrics.services.MetricExposerConfig
+import com.mwam.kafkakewl.metrics.services.TopicsConfig
 import com.mwam.kafkakewl.utils.config.TypesafeConfigExtensions
 import zio.*
 import zio.config.magnolia.descriptor
@@ -20,7 +20,7 @@ final case class MainConfig(
     consumerOffsetsSource: ConsumerOffsetsSourceConfig,
     http: HttpConfig,
     metrics: MetricsConfig,
-    metricsExposer: MetricExposerConfig
+    topics: TopicsConfig
 )
 
 final case class ConsumerOffsetsSourceConfig(

@@ -56,7 +56,7 @@ object Main extends ZIOAppDefault {
 
     (for
       topicInfoSource <- ZIO.service[KafkaTopicInfoSource]
-      _ <- HighOffsetMetricsExposer.startPublishing(topicInfoSource.subscribeStream())
+      _ <- ZIO.service[HighOffsetMetricsExposer]
       _ <- topicInfoSource.startPublishing()
       consumerOffsetsSource <- ZIO.service[ConsumerOffsetsSource]
       _ <- consumerOffsetsSource.startPublishing()
@@ -94,7 +94,8 @@ object Main extends ZIOAppDefault {
       Tracing.live,
       GlobalTracer.live,
       ContextStorage.openTelemetryContext,
-      MetricExposerConfig.live
+      TopicsConfig.live,
+      HighOffsetMetricsExposer.live
     )
   }
 }
