@@ -56,9 +56,14 @@ object Main extends ZIOAppDefault {
 
     (for
       topicInfoSource <- ZIO.service[KafkaTopicInfoSource]
+
       _ <- topicInfoSource.startPublishing()
       consumerOffsetsSource <- ZIO.service[ConsumerOffsetsSource]
       _ <- consumerOffsetsSource.startPublishing()
+
+      // We need to request this service if we provide it.
+      // This operation does not do anything directly.
+      _ <- ZIO.service[HighOffsetMetricsExposer]
 
       endpoints <- ZIO.service[Endpoints]
       httpApp = ZioHttpInterpreter(options).toHttp(endpoints.endpoints)
@@ -92,7 +97,9 @@ object Main extends ZIOAppDefault {
       HttpServer.live,
       Tracing.live,
       GlobalTracer.live,
-      ContextStorage.openTelemetryContext
+      ContextStorage.openTelemetryContext,
+      TopicsConfig.live,
+      HighOffsetMetricsExposer.live
     )
   }
 }
