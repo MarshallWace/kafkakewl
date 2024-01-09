@@ -14,6 +14,8 @@ import scala.collection.immutable.SortedMap
 object KafkaConsumerGroupInfoSchema {
   given Schema[KafkaConsumerGroupInfo] = Schema.derived[KafkaConsumerGroupInfo]
   // TODO hmmm... this looks nasty, any better way of doing this?
-  given Schema[SortedMap[Int, KafkaConsumerGroupOffset]] =
-    Schema.schemaForMap[Int, KafkaConsumerGroupOffset](_.toString).map(a => Some(SortedMap.from(a)))(_.toMap)
+  given kafkaConsumerGroupTopicInfoMap: Schema[SortedMap[Int, KafkaConsumerGroupMetrics]] =
+    Schema.schemaForMap[Int, KafkaConsumerGroupMetrics](_.toString).map(a => Some(SortedMap.from(a)))(_.toMap)
+  given Schema[SortedMap[String, KafkaConsumerGroupTopicInfo]] =
+    Schema.schemaForMap[String, KafkaConsumerGroupTopicInfo](_.toString).map(a => Some(SortedMap.from(a)))(_.toMap)
 }

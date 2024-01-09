@@ -58,6 +58,8 @@ object Main extends ZIOAppDefault {
       topicInfoSource <- ZIO.service[KafkaTopicInfoSource]
       _ <- topicInfoSource.startPublishing()
       consumerOffsetsSource <- ZIO.service[ConsumerOffsetsSource]
+      consumerCalcSource <- ZIO.service[KafkaConsumerGroupMetricsCalc]
+      _ <- consumerCalcSource.startPublishing()
       _ <- consumerOffsetsSource.startPublishing()
 
       endpoints <- ZIO.service[Endpoints]
@@ -79,6 +81,7 @@ object Main extends ZIOAppDefault {
       ConsumerOffsetsSource.live,
       KafkaTopicInfoSource.live,
       KafkaTopicInfoCache.live,
+      KafkaConsumerGroupMetricsCalc.live,
       KafkaConsumerGroupInfoCache.live,
       TopicEndpoints.live,
       TopicServerEndpoints.live,
