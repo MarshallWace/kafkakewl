@@ -210,7 +210,7 @@ class KafkaConsumerGroupMetricsCalc(
       .provideEnvironment(ZEnvironment(scope))
       .orDie
       .fork // TODO error handling!
-    // TODO not expecting subscribers after this -> those would not get the initial snapshot of topic infos, only diffs
+    // TODO not expecting subscribers after this -> those would not get the initial snapshot of consumer group metrics, only diffs
     // TODO check if we need to interrupt the fiber at all, maybe runScoped does it already?
     _ <- scope.addFinalizer(consumerGroupMetricsFiber.interrupt *> hub.shutdown *> ZIO.log("KafkaConsumerGroupMetricsCalc has shut down"))
   } yield ()

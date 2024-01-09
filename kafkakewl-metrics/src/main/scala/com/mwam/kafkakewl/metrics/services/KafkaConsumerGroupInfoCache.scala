@@ -92,7 +92,7 @@ object KafkaConsumerGroupInfoCache {
       .map(group =>
         val newTopicMap = (metricMap.get(group), addedOrUpdated.get(group)) match {
           case (Some(oldTopicMap), Some(newTopicMap)) =>
-            val tmp = oldTopicMap.topics.keySet.unsorted
+            val updatedTopicMap = oldTopicMap.topics.keySet.unsorted
               .union(newTopicMap.topics.keySet.unsorted)
               .map(topic =>
                 val newPartitionMap = (oldTopicMap.topics.get(topic), newTopicMap.topics.get(topic)) match {
@@ -101,7 +101,7 @@ object KafkaConsumerGroupInfoCache {
                 }
                 (topic, KafkaConsumerGroupTopicInfo(newPartitionMap))
               )
-            SortedMap.from(tmp)
+            SortedMap.from(updatedTopicMap)
           case (oldTopicMap, newTopicMap) => oldTopicMap.map(_.topics).orElse(newTopicMap.map(_.topics)).get
         }
         (group, KafkaConsumerGroupInfo(newTopicMap))
@@ -118,7 +118,7 @@ object KafkaConsumerGroupInfoCache {
       .map(group =>
         val newTopicMap = (metricMap.get(group), removed.get(group)) match {
           case (Some(oldTopicMap), Some(removedTopicMap)) =>
-            val tmp = oldTopicMap.topics.keySet.unsorted
+            val updatedTopicMap = oldTopicMap.topics.keySet.unsorted
               .union(removedTopicMap.keySet)
               .map(topic =>
                 val newPartitionMap = (oldTopicMap.topics.get(topic), removedTopicMap.get(topic)) match {
@@ -128,7 +128,7 @@ object KafkaConsumerGroupInfoCache {
                 }
                 (topic, KafkaConsumerGroupTopicInfo(newPartitionMap))
               )
-            SortedMap.from(tmp)
+            SortedMap.from(updatedTopicMap)
 
           case (Some(oldTopicMap), _) => oldTopicMap.topics
           case (_, _)                 => SortedMap.empty[String, KafkaConsumerGroupTopicInfo]
