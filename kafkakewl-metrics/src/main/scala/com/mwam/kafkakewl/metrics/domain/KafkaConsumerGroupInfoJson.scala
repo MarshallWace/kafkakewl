@@ -14,8 +14,17 @@ import KafkaTopicPartitionInfoJson.given
 object KafkaConsumerGroupInfoJson {
   given JsonEncoder[KafkaConsumerGroupOffset] = DeriveJsonEncoder.gen[KafkaConsumerGroupOffset]
   given JsonDecoder[KafkaConsumerGroupOffset] = DeriveJsonDecoder.gen[KafkaConsumerGroupOffset]
-  given JsonEncoder[ConsumerGroupStatus] = DeriveJsonEncoder.gen[ConsumerGroupStatus]
-  given JsonDecoder[ConsumerGroupStatus] = DeriveJsonDecoder.gen[ConsumerGroupStatus]
+  given JsonEncoder[ConsumerGroupStatus] = JsonEncoder[String].contramap(_.toString)
+  // TODO: Is there a better way of decoding enum variants
+  given JsonDecoder[ConsumerGroupStatus] = JsonDecoder[String].mapOrFail {
+    case "Ok"           => Right(ConsumerGroupStatus.Ok)
+    case "Warning"      => Right(ConsumerGroupStatus.Warning)
+    case "Error"        => Right(ConsumerGroupStatus.Error)
+    case "Unknown"      => Right(ConsumerGroupStatus.Unknown)
+    case "MaybeStopped" => Right(ConsumerGroupStatus.MaybeStopped)
+    case "Stopped"      => Right(ConsumerGroupStatus.Stopped)
+    case other          => Left(s"Unknown enumeration value `$other` found")
+  }
   given JsonEncoder[KafkaConsumerGroupMetrics] = DeriveJsonEncoder.gen[KafkaConsumerGroupMetrics]
   given JsonDecoder[KafkaConsumerGroupMetrics] = DeriveJsonDecoder.gen[KafkaConsumerGroupMetrics]
   given kafkaConsumerGroupTopicInfoMapEncoder: JsonEncoder[SortedMap[Int, KafkaConsumerGroupMetrics]] =

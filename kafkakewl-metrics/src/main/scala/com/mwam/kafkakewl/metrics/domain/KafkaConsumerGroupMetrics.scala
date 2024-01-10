@@ -6,7 +6,8 @@
 
 package com.mwam.kafkakewl.metrics.domain
 
-enum ConsumerGroupStatus(val severity: Int):
+enum ConsumerGroupStatus(val severity: Int) {
+
   /** Aggregates 2 ConsumerGroupStatuses so that the result is the more severe.
     */
   def +(other: ConsumerGroupStatus): ConsumerGroupStatus = if (severity < other.severity) other else this
@@ -18,10 +19,12 @@ enum ConsumerGroupStatus(val severity: Int):
   case MaybeStopped extends ConsumerGroupStatus(5)
   case Stopped extends ConsumerGroupStatus(6)
 
-end ConsumerGroupStatus
+}
 
-implicit class ConsumerGroupStatusIterableExtensions(consumerGroupStatuses: Iterable[ConsumerGroupStatus]) {
-  def combine: ConsumerGroupStatus = consumerGroupStatuses.fold(ConsumerGroupStatus.Ok)(_ + _)
+object ConsumerGroupStatus {
+  extension (consumerGroupStatuses: Iterable[ConsumerGroupStatus]) {
+    def combine: ConsumerGroupStatus = consumerGroupStatuses.fold(ConsumerGroupStatus.Ok)(_ + _)
+  }
 }
 
 final case class AggregatedConsumerGroupStatus(
@@ -40,7 +43,7 @@ object AggregatedConsumerGroupStatus {
 
   val Ok = AggregatedConsumerGroupStatus(ConsumerGroupStatus.Ok)
 
-  implicit class AggregatedConsumerGroupStatusIterableExtensions(aggregatedConsumerGroupStatuses: Iterable[AggregatedConsumerGroupStatus]) {
+  extension (aggregatedConsumerGroupStatuses: Iterable[AggregatedConsumerGroupStatus]) {
     def combine: Option[AggregatedConsumerGroupStatus] = aggregatedConsumerGroupStatuses.reduceOption(_ + _)
   }
 }
@@ -54,12 +57,11 @@ final case class KafkaConsumerGroupMetrics(
 )
 
 object KafkaConsumerGroupMetrics {
-  implicit class ConsumerGroupMetricsExtensions(consumerGroupMetrics: Iterable[KafkaConsumerGroupMetrics]) {
+  extension (consumerGroupMetrics: Iterable[KafkaConsumerGroupMetrics]) {
 
     /** Calculates the total lag. It's None if ALL partition lags are None, otherwise None lags are considered 0 and the others are added up.
       */
     def sumLag: Option[Long] = if (consumerGroupMetrics.exists(_.lag.isDefined)) Some(consumerGroupMetrics.map(_.lag.getOrElse(0L)).sum) else None
-
     def combineStatus: ConsumerGroupStatus = consumerGroupMetrics.map(_.status).combine
 
     def combineStatusAggregated: Option[AggregatedConsumerGroupStatus] =

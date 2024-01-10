@@ -45,22 +45,25 @@ class ConsumerGroupMetricsManager(
     // Update the cache
     val (newLatestConsumerGroupOffsets, addedKeys, removedGroupTopicPartition) =
       ConsumerGroupMetricsManager.updateMapWithAddedRemoved(latestConsumerGroupOffsets, addedOrUpdated, removed)
+
     for {
 
       // Push the updates to current workers
-      _ <- ZIO.foreachParDiscard(addedOrUpdated) { (groupTopicPartition, groupOffset) =>
-        workers
-          .get(groupTopicPartition)
-          .map(worker => worker.consumerGroupUpdate.offer(groupOffset))
-          .getOrElse(ZIO.unit)
-      }
+      _ <- ZIO
+        .foreachParDiscard(addedOrUpdated) { (groupTopicPartition, groupOffset) =>
+          workers
+            .get(groupTopicPartition)
+            .map(worker => worker.consumerGroupUpdate.offer(groupOffset))
+            .getOrElse(ZIO.unit)
+        }
 
       // Create new workers for new ConsumerGroupTopicPartition
-      addedWorkers <- ZIO.foreachPar(addedKeys) { consumerGroupTopicPartition =>
-        ZIO
-          .succeed(consumerGroupTopicPartition)
-          .zip(createNewWorkerFiber(consumerGroupTopicPartition, latestTopicPartitionInfos, newLatestConsumerGroupOffsets))
-      }
+      addedWorkers <- ZIO
+        .foreachPar(addedKeys) { consumerGroupTopicPartition =>
+          ZIO
+            .succeed(consumerGroupTopicPartition)
+            .zip(createNewWorkerFiber(consumerGroupTopicPartition, latestTopicPartitionInfos, newLatestConsumerGroupOffsets))
+        }
 
       workersWithAdded = workers ++ addedWorkers
 
@@ -72,14 +75,19 @@ class ConsumerGroupMetricsManager(
       )
 
       // Remove workers that have had nulls pushed to them, interrupting their fibres
-      _ <- ZIO.foreachParDiscard(removedGroupTopicPartition) { groupTopicPartition =>
-        workersWithAdded.get(groupTopicPartition).map(worker => worker.fibreHandle.interrupt).getOrElse(ZIO.unit) *> workerOutputQueue.offer(
-          KafkaConsumerGroupMetricChanges(Map.empty, Set(groupTopicPartition))
-        )
-      }
+      _ <- ZIO
+        .foreachParDiscard(removedGroupTopicPartition) { groupTopicPartition =>
+          workersWithAdded
+            .get(groupTopicPartition)
+            .map(worker => worker.fibreHandle.interrupt)
+            .getOrElse(ZIO.unit) *> workerOutputQueue.offer(
+            KafkaConsumerGroupMetricChanges(Map.empty, Set(groupTopicPartition))
+          )
+        }
+
       workersWithRemoved = workersWithAdded.removedAll(removedGroupTopicPartition)
 
-    } yield ConsumerGroupMetricsManager(
+    } yield new ConsumerGroupMetricsManager(
       workerOutputQueue,
       workersWithRemoved,
       newPartitionConsumers,
@@ -108,7 +116,7 @@ class ConsumerGroupMetricsManager(
         .mergeEither(ZStream.fromQueueWithShutdown(consumerGroupUpdate))
         .runFoldZIO((Option.empty[KafkaTopicPartitionInfo], Option.empty[KafkaConsumerGroupOffset])) { (state, update) =>
           // TODO: The window metric functions
-          val (newState) = update match {
+          val (lastTopicPartitionInfo, lastKafkaConsumerGroupOffset) = update match {
             case Left(kafkaTopicPartitionInfo)   => (Some(kafkaTopicPartitionInfo), state._2)
             case Right(kafkaConsumerGroupOffset) => (state._1, Some(kafkaConsumerGroupOffset))
           }
@@ -118,16 +126,16 @@ class ConsumerGroupMetricsManager(
                 Map(
                   consumerGroupTopicPartition -> KafkaConsumerGroupMetrics(
                     ConsumerGroupStatus.Ok,
-                    newState._1,
-                    newState._2,
-                    newState._1.zip(newState._2).map((tpi, cgo) => (tpi.endOffset - cgo.offset).max(0)),
+                    lastTopicPartitionInfo,
+                    lastKafkaConsumerGroupOffset,
+                    lastTopicPartitionInfo.zip(lastKafkaConsumerGroupOffset).map((tpi, cgo) => (tpi.endOffset - cgo.offset).max(0)),
                     Some(0.0)
                   )
                 ),
                 Set.empty
               )
             )
-            .as(newState)
+            .as((lastTopicPartitionInfo, lastKafkaConsumerGroupOffset))
         }
         .ignore
         .fork
@@ -178,9 +186,9 @@ class ConsumerGroupMetricsManager(
   }
 }
 
-object ConsumerGroupMetricsManager {
+private object ConsumerGroupMetricsManager {
   // Returns tuple of new map, new keys, removed keys
-  def updateMapWithAddedRemoved[K, V](oldMap: Map[K, V], addedOrUpdated: Map[K, V], removed: Set[K]): (Map[K, V], Set[K], Set[K]) = {
+  private def updateMapWithAddedRemoved[K, V](oldMap: Map[K, V], addedOrUpdated: Map[K, V], removed: Set[K]): (Map[K, V], Set[K], Set[K]) = {
     val newMap =
       oldMap.keySet.union(addedOrUpdated.keySet).map(key => (key, oldMap.get(key).orElse(addedOrUpdated.get(key)).get)).toMap.removedAll(removed)
     val newKeys = addedOrUpdated.keySet.diff(oldMap.keySet)
@@ -188,11 +196,11 @@ object ConsumerGroupMetricsManager {
     (newMap, newKeys, removedKeys)
   }
 
-  def updateMapOfSetsWithAddedRemoved[K, V](oldMap: Map[K, Set[V]], addedOrUpdated: Map[K, V], removed: Map[K, V]): Map[K, Set[V]] = {
+  private def updateMapOfSetsWithAddedRemoved[K, V](oldMap: Map[K, Set[V]], addedOrUpdated: Map[K, V], removed: Map[K, V]): Map[K, Set[V]] = {
     val newMap =
       oldMap.keySet
         .union(addedOrUpdated.keySet)
-        .map(key => (key, oldMap(key).union(addedOrUpdated.get(key).toSet).removedAll(removed.get(key))))
+        .map(key => (key, oldMap.getOrElse(key, Set.empty).union(addedOrUpdated.get(key).toSet).removedAll(removed.get(key))))
         .toMap
     newMap
   }
@@ -231,10 +239,10 @@ object KafkaConsumerGroupMetricsCalc {
       } yield KafkaConsumerGroupMetricsCalc(scope, groupMetricsStream, hub)
     }
 
-  private def createConsumerGroupMetricStream(
+  def createConsumerGroupMetricStream(
       consumerOffsetStream: ZStream[Any, Nothing, KafkaConsumerGroupOffsets],
       topicInfoStream: ZStream[Any, Nothing, KafkaTopicPartitionInfoChanges]
-  ): UIO[ZStream[Any, Throwable, KafkaConsumerGroupMetricChanges]] = for {
+  ): UIO[ZStream[Any, Nothing, KafkaConsumerGroupMetricChanges]] = for {
     // Manager loop merges the two relevant streams and processes each message individually in a fold
     outputQueue <- Queue.unbounded[KafkaConsumerGroupMetricChanges]
     _ <- consumerOffsetStream
@@ -247,7 +255,7 @@ object KafkaConsumerGroupMetricsCalc {
       }
       .fork
   } yield ZStream
-    .fromQueueWithShutdown(outputQueue)
+    .fromQueue(outputQueue)
     .aggregateAsyncWithin(ZSink.collectAll[KafkaConsumerGroupMetricChanges], Schedule.fixed(Duration.fromSeconds(1)))
     .map { updates =>
 
