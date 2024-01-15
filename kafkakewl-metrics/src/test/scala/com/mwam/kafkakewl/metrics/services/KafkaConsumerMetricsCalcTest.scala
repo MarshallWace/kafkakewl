@@ -40,9 +40,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
       consumerQueue: Queue[KafkaConsumerGroupOffsets]
   ): UIO[KafkaConsumerGroupMetricChanges] = for {
     _ <- consumerQueue.offer(
-      Map.newBuilder
-        .addOne(ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)))
-        .result()
+      Map(ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)))
     )
     result <- cmc.take(1).runCollect
   } yield result(0)
@@ -53,9 +51,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
   ): UIO[KafkaConsumerGroupMetricChanges] = for {
     _ <- topicQueue.offer(
       KafkaTopicPartitionInfoChanges(
-        Map.newBuilder
-          .addOne(KafkaTopicPartition("testTopic", 0) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX))
-          .result(),
+        Map(KafkaTopicPartition("testTopic", 0) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX)),
         Set.empty
       )
     )
@@ -68,9 +64,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
   ): UIO[KafkaConsumerGroupMetricChanges] = for {
     _ <- consumerQueue
       .offer(
-        Map.newBuilder
-          .addOne(ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> None)
-          .result()
+        Map(ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> None)
       )
     result <- cmc.take(1).runCollect
   } yield result(0)
@@ -90,32 +84,28 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
   } yield result(0)
 
   def kafkaConsumerGroupMetricChangesWithoutTopic: KafkaConsumerGroupMetricChanges = KafkaConsumerGroupMetricChanges(
-    Map.newBuilder
-      .addOne(
-        ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> KafkaConsumerGroupMetrics(
-          ConsumerGroupStatus.Ok,
-          None,
-          Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)),
-          None,
-          Some(0.0)
-        )
+    Map(
+      ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> KafkaConsumerGroupMetrics(
+        ConsumerGroupStatus.Ok,
+        None,
+        Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)),
+        None,
+        Some(0.0)
       )
-      .result(),
+    ),
     Set.empty
   )
 
   def kafkaConsumerGroupMetricChangesWithTopic: KafkaConsumerGroupMetricChanges = KafkaConsumerGroupMetricChanges(
-    Map.newBuilder
-      .addOne(
-        ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> KafkaConsumerGroupMetrics(
-          ConsumerGroupStatus.Ok,
-          Some(KafkaTopicPartitionInfo(20, 3, Instant.MAX)),
-          Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)),
-          Some(0),
-          Some(0.0)
-        )
+    Map(
+      ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> KafkaConsumerGroupMetrics(
+        ConsumerGroupStatus.Ok,
+        Some(KafkaTopicPartitionInfo(20, 3, Instant.MAX)),
+        Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)),
+        Some(0),
+        Some(0.0)
       )
-      .result(),
+    ),
     Set.empty
   )
 
@@ -132,20 +122,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
         firstResult <- pushTestConsumerGroup(cmc, consumerQueue)
 
       } yield assertTrue(
-        firstResult == KafkaConsumerGroupMetricChanges(
-          Map.newBuilder
-            .addOne(
-              ConsumerGroupTopicPartition("testGroup", "testTopic", 0) -> KafkaConsumerGroupMetrics(
-                ConsumerGroupStatus.Ok,
-                None,
-                Some(KafkaConsumerGroupOffset(123, "", OffsetDateTime.MAX)),
-                None,
-                Some(0.0)
-              )
-            )
-            .result(),
-          Set.empty
-        )
+        firstResult == kafkaConsumerGroupMetricChangesWithoutTopic
       )
     } @@ TestAspect.withLiveClock,
     test("Nulling a kafka consumer group removes consumer group metrics") {
@@ -169,9 +146,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
         _ <- topicQueue
           .offer(
             KafkaTopicPartitionInfoChanges(
-              Map.newBuilder
-                .addOne(KafkaTopicPartition("testTopic", 0) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX))
-                .result(),
+              Map(KafkaTopicPartition("testTopic", 0) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX)),
               Set.empty
             )
           )
@@ -179,9 +154,7 @@ object KafkaConsumerMetricsCalcTest extends ZIOSpecDefault {
         // As the queue is bounded to 1 we wait until the last finished processing
         _ <- topicQueue.offer(
           KafkaTopicPartitionInfoChanges(
-            Map.newBuilder
-              .addOne(KafkaTopicPartition("testTopic", 1) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX))
-              .result(),
+            Map(KafkaTopicPartition("testTopic", 1) -> KafkaTopicPartitionInfo(20, 3, Instant.MAX)),
             Set.empty
           )
         )
