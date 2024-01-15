@@ -30,7 +30,7 @@ class ConsumerGroupServerEndpoints(
   private def getConsumerGroup(consumerGroup: String): ZIO[Any, QueryFailure, KafkaConsumerGroupInfo] = for {
     _ <- tracing.addEvent("reading consumer group info from cache")
     _ <- tracing.setAttribute("group", consumerGroup)
-    consumerGroupInfo <- consumerGroupInfoCache.getConsumerGroupInfo(consumerGroup)
+    consumerGroupInfo <- consumerGroupInfoCache.getConsumerGroupMetrics(consumerGroup)
     _ <- tracing.addEvent(consumerGroupInfo match
       case Some(_) => "read consumer group info from cache"
       case None    => "consumer group not found in cache"
