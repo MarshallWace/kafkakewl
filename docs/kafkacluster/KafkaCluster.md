@@ -85,6 +85,39 @@ By default it's `false`.
 
 **`replicaPlacementConfigs`**: [`Map[String, ReplicaPlacementConfig]?`](ReplicaPlacementConfig.md) - the optional map of replica-placement configurations to identifiers. The keys of these map can be used in the [topic](../topology/TopologyTopic.md)s' `replicaPlacement` property.
 
+Every topic can choose a single replica-placement config to use. A replica-placement config can specify defaults for topic configs and enable/disable overriding that default.
+
+For example this can be used to fix the `confluent.placement.constraints` topic config (if the confluent platform is being used)
+to a given value (e.g. 3 replicas and 3 observers for each topic with certain rack constraints) and disable overriding it in topics.
+In addition to this, maybe the `min.insync.replicas` topic config can default to 2 but remain overridable in topic configs.
+
+This way admins can give users one or more of these keyed topic config defaults and also can specify the default that topics will
+use if they don't specify their `replicaPlacement`.
+
+**`replicaPlacementConfigEquivalents`**: `Map[String, Array[String]]?` - An optional map that can specify one ore more equivalent values for a given `confluent.placement.constraints` value.
+
+The key is a `confluent.placement.constraints` value, the value is an array of strings where each string is an equivalent `confluent.placement.constraints` value.
+
+This is a workaround for a known confluent bug/missing feature: certain `confluent.placement.constraints` values aren't supported for new topics, e.g. in-sync replicas and observers in the same rack.
+To work around it, kafkakewl can just use a `confluent.placement.constraints` that makes every replica to be an in-sync replica, and some external tool
+can downgrade some of those in-sync replicas to be observers, update the topic config and do the necessary replica manipulation.
+
+However, it's also necessary for kafkakewl not to see the updated `confluent.placement.constraints` as a difference in topic configs, and pretend that it's the same as the desired `confluent.placement.constraints`.
+
+To achieve this, there could be a list of equivalent `confluent.placement.constraints` specified for the one that gets into the new topics so that kafkakewl will ignore any difference that an external tool makes.
+
+An example where new topics may be created with 3+3 in-sync replicas in two racks, but a tool downgrades 1+1 in-sync replicas to be only observers:
+
+```json
+{
+    "replicaPlacementConfigEquivalents": {
+        "{\"observerPromotionPolicy\":\"under-min-isr\",\"version\":2,\"replicas\":[{\"count\":3,\"constraints\":{\"rack\":\"rack1\"}},{\"count\":3,\"constraints\":{\"rack\":\"rack2\"}}],\"observers\":[]}": [
+          "{\"observerPromotionPolicy\":\"under-min-isr\",\"version\":2,\"replicas\":[{\"count\":2,\"constraints\":{\"rack\":\"rack1\"}},{\"count\":2,\"constraints\":{\"rack\":\"rack2\"}}],\"observers\":[{\"count\":1,\"constraints\":{\"rack\":\"rack1\"}},{\"count\":1,\"constraints\":{\"rack\":\"rack2\"}}]}"
+        ]
+    }
+}
+```
+
 **`defaultReplicaPlacementId`**: `String?` - the optional (mandatory if there are `replicaPlacements`) replica-placement-id to be used for [topic](../topology/TopologyTopic.md)s without a `replicaPlacement` set.
 
 **`topicConfigKeysAllowedInTopologies`**: [`TopicConfigKeyConstraintInclusive?`](TopicConfigKeyConstraints.md) - the optional topic config constraints that decide what topic configs are allowed in topologies' topics.
@@ -113,25 +146,19 @@ It's recommended to set this to something like:
 
 **`additionalManagedTopicConfigKeys`**: [`TopicConfigKeyConstraintExclusive?`](TopicConfigKeyConstraints.md) - the optional topic config constraints that in addition to the `topicConfigKeysAllowedInTopologies` decides what topic configs are managed by kafkakewl.
 
+In addition to these, all topic configs with a default value in `replicaPlacementConfigs` are considered managed.
+
 If a topic config is NOT managed by kafkakewl, it won't ever try to overwrite that config in a kafka topic. It's useful when kafka or confluent platform uses certain topic configs for internal tools, e.g. `leader.replication.throttled.replicas` and kafkakewl can ignore these safely.  
 
 If empty, or if the `include` part is empty, it'll include no additional topic configs.
 
-It's recommended to set this to something like:
+Normally it's OK to leave this completely empty or even not specified so that kafkakewl won't overwrite any other topic config but the ones that somehow are part of the topic's desired state:
+- either specified explicitly in the topic config (and allowed in `topicConfigKeysAllowedInTopologies`)
+- or have a default value in `replicaPlacementConfigs` for the given topic.
 
-```json
-{
-    "additionalManagedTopicConfigKeys": {
-        "include": [
-            "confluent.placement.constraints"
-        ]
-    }
-}
-```
+**`systemTopicsReplicaPlacementId`**: `String?` - the optional replica-placement-id to be used for the internal, system topics (e.g. `kewl.changelog`). If empty the `defaultReplicaPlacementId` is used.
 
-so that even though `"confluent.placement.constraints"` is not allowed in topology it's still managed by kafkakewl (gets typically generated by the `replicaPlacement`). 
-
-**`tags`**: `Array[Strings]?` - an optional array of string tags for the cluster. By default it's empty, and it's completely ignored by kafkakewl.
+**`tags`**: `Array[Strings]?` - an optional array of string tags for the cluster. By default, it's empty, and it's completely ignored by kafkakewl.
 
 **`labels`**: `Map[String, String]?` - an optional object containing string key-values for custom labels for the cluster. By default it's empty and it's completely ignored by kafkakewl.
 
