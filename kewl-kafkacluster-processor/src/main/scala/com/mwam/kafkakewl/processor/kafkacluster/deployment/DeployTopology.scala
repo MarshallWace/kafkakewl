@@ -21,10 +21,13 @@ import com.mwam.kafkakewl.processor.kafkacluster.KafkaClusterCommandProcessing.P
 import com.mwam.kafkakewl.processor.kafkacluster.{KafkaClusterAdmin, deployment}
 import com.mwam.kafkakewl.utils._
 import com.typesafe.scalalogging.Logger
+import nl.grons.metrics4.scala.{DefaultInstrumented, MetricName}
 
 import scala.util.Try
 
-private[kafkacluster] object DeployTopology {
+private[kafkacluster] object DeployTopology extends DefaultInstrumented {
+  override lazy val metricBaseName = MetricName("com.mwam.kafkakewl.processor.kafkacluster.deploy")
+
   implicit class TryKafkaOperationResultExtensions(result: Try[KafkaOperationResult[Unit]]) {
     def toKafkaClusterCommandActionExecution(action: String): KafkaClusterCommandActionExecution = {
       KafkaClusterCommandActionExecution(
@@ -579,9 +582,16 @@ private[kafkacluster] trait DeployTopology {
 
     for {
       // fail-fast validation
-      _ <- TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults)
-        .toEither
-        .left.map(f => command.failedResult(f.toList))
+      _ <- {
+        val (result, duration) = durationOf {
+          TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults)
+            .toEither
+            .left.map(f => command.failedResult(f.toList))
+        }
+        metrics.timer(s"validation:$kafkaClusterId").update(duration)
+        logger.info(f"topology-to-deploy validation: ${duration.toMillisDouble}%.3f ms")
+        result
+      }
 
       // first, delete the topology's topics that we need to re-create as part of this deployment (respecting dry-run of course)
       recreatedTopicsResult <-
@@ -603,11 +613,18 @@ private[kafkacluster] trait DeployTopology {
       (kafkaClusterTopicKeysToIgnore, changesToRecreateTopicsWithApprovalAndActionResult) = recreatedTopicsResult
 
       // loading all kafka-cluster items from the cluster (except the ones we were supposed to delete-to-recreate in dry-run mode)
-      deployedKafkaClusterItems <- kafkaClusterItemsOfCluster(
-        command,
-        kafkaCluster.nonKewl,
-        exceptTopicKeys = kafkaClusterTopicKeysToIgnore
-      )
+      deployedKafkaClusterItems <- {
+        val (result, duration) = durationOf {
+          kafkaClusterItemsOfCluster(
+            command,
+            kafkaCluster.nonKewl,
+            exceptTopicKeys = kafkaClusterTopicKeysToIgnore
+          )
+        }
+        metrics.timer(s"getkafkaclusteritems:$kafkaClusterId").update(duration)
+        logger.info(f"getting the topics and acls from the kafka brokers: ${duration.toMillisDouble}%.3f ms")
+        result
+      }
 
       // what changes do we need to perform to achieve the state defined in the topology, given the current items in the cluster
       changes = createChangesToDeployTopology(
@@ -719,11 +736,23 @@ private[kafkacluster] trait DeployTopology {
 
         for {
           // fail-fast validation
-          _ <- TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, None, kafkaClusterId, kafkaCluster, topicDefaults)
-            .toEither
-            .left.map(f => command.failedResult(f.toList))
+          _ <- {
+            val (result, duration) = durationOf {
+              TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, None, kafkaClusterId, kafkaCluster, topicDefaults)
+                .toEither
+                .left.map(f => command.failedResult(f.toList))
+            }
+            metrics.timer(s"validation:$kafkaClusterId").update(duration)
+            logger.info(f"topology-to-deploy validation: ${duration.toMillisDouble}%.3f ms")
+            result
+          }
 
-          deployedKafkaClusterItems <- kafkaClusterItemsOfCluster(command, kafkaCluster.nonKewl)
+          deployedKafkaClusterItems <- {
+            val (result, duration) = durationOf { kafkaClusterItemsOfCluster(command, kafkaCluster.nonKewl) }
+            metrics.timer(s"getkafkaclusteritems:$kafkaClusterId").update(duration)
+            logger.info(f"getting the topics and acls from the kafka brokers: ${duration.toMillisDouble}%.3f ms")
+            result
+          }
 
           changes = createChangesToDeployTopology(
             kafkaCluster.resolveTopicConfig,
