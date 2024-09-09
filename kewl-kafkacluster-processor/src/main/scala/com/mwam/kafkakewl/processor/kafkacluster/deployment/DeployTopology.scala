@@ -582,15 +582,13 @@ private[kafkacluster] trait DeployTopology {
 
     for {
       // fail-fast validation
-      _ <- {
-        val (result, duration) = durationOf {
-          TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults)
-            .toEither
-            .left.map(f => command.failedResult(f.toList))
-        }
+      _ <-  withDurationOf {
+        TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults)
+          .toEither
+          .left.map(f => command.failedResult(f.toList))
+      } { duration =>
         metrics.timer(s"validation:$kafkaClusterId").update(duration)
         logger.info(f"topology-to-deploy validation: ${duration.toMillisDouble}%.3f ms")
-        result
       }
 
       // first, delete the topology's topics that we need to re-create as part of this deployment (respecting dry-run of course)
@@ -613,17 +611,15 @@ private[kafkacluster] trait DeployTopology {
       (kafkaClusterTopicKeysToIgnore, changesToRecreateTopicsWithApprovalAndActionResult) = recreatedTopicsResult
 
       // loading all kafka-cluster items from the cluster (except the ones we were supposed to delete-to-recreate in dry-run mode)
-      deployedKafkaClusterItems <- {
-        val (result, duration) = durationOf {
-          kafkaClusterItemsOfCluster(
-            command,
-            kafkaCluster.nonKewl,
-            exceptTopicKeys = kafkaClusterTopicKeysToIgnore
-          )
-        }
+      deployedKafkaClusterItems <- withDurationOf {
+        kafkaClusterItemsOfCluster(
+          command,
+          kafkaCluster.nonKewl,
+          exceptTopicKeys = kafkaClusterTopicKeysToIgnore
+        )
+      } { duration =>
         metrics.timer(s"getkafkaclusteritems:$kafkaClusterId").update(duration)
         logger.info(f"getting the topics and acls from the kafka brokers: ${duration.toMillisDouble}%.3f ms")
-        result
       }
 
       // what changes do we need to perform to achieve the state defined in the topology, given the current items in the cluster
@@ -736,22 +732,18 @@ private[kafkacluster] trait DeployTopology {
 
         for {
           // fail-fast validation
-          _ <- {
-            val (result, duration) = durationOf {
+          _ <- withDurationOf {
               TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, None, kafkaClusterId, kafkaCluster, topicDefaults)
                 .toEither
                 .left.map(f => command.failedResult(f.toList))
-            }
+            } { duration =>
             metrics.timer(s"validation:$kafkaClusterId").update(duration)
             logger.info(f"topology-to-deploy validation: ${duration.toMillisDouble}%.3f ms")
-            result
           }
 
-          deployedKafkaClusterItems <- {
-            val (result, duration) = durationOf { kafkaClusterItemsOfCluster(command, kafkaCluster.nonKewl) }
+          deployedKafkaClusterItems <- withDurationOf { kafkaClusterItemsOfCluster(command, kafkaCluster.nonKewl) } { duration =>
             metrics.timer(s"getkafkaclusteritems:$kafkaClusterId").update(duration)
             logger.info(f"getting the topics and acls from the kafka brokers: ${duration.toMillisDouble}%.3f ms")
-            result
           }
 
           changes = createChangesToDeployTopology(
