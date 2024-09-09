@@ -39,3 +39,11 @@ rules:
       kafkaCluster: "$1"
       topic: "$2"
       type: "$3"
+  - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.processor\.kafkacluster\.deploy\.(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl_deploy_duration"
+    value: "$4"
+    labels:
+      operation: "$1"
+      kafkaCluster: "$2"
+      type: "$3"

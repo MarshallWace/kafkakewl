@@ -40,6 +40,7 @@ object TopologyValidatorWithOthers {
     // the new topology may impact the existing topologies' dependencies (e.g. removing a shared topic that's referenced is invalid)
     val existingTopologyDependenciesValidationResult =
       (currentTopologiesMap - newTopologyId)
+        .par
         .map { case (existingTopologyId, existingTopology) =>
           validateTopologyExternalDependencies(
             allowedCustomRelationships,
@@ -54,7 +55,9 @@ object TopologyValidatorWithOthers {
             visibilityErrorToStringForDependents(existingTopologyId, newTopologyId),
             topicDefaults
           )
-        }.toSeq.combine()
+        }
+        .seq
+        .toSeq.combine()
 
     newTopologyDependenciesValidationResult ++ existingTopologyDependenciesValidationResult
   }

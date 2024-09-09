@@ -47,7 +47,7 @@ package object utils {
     (result, duration)
   }
 
-  def withDurationOf[T](action: => T)(handler: Duration => Unit): T = {
+  def withDurationOf[T](action: => T)(handler: FiniteDuration => Unit): T = {
     val (r, d) = durationOf[T](action)
     handler(d)
     r
