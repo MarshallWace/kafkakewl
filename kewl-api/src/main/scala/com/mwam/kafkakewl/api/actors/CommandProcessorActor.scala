@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.api.actors
 
 import akka.actor.Actor
 import akka.pattern.{ask, pipe}
+import akka.util.Timeout
 import cats.data.EitherT
 import cats.instances.future._
 import com.mwam.kafkakewl.common._
@@ -44,7 +45,7 @@ class CommandProcessorActor(
   val permissionStoreBuiltinExtensionOrNone: Option[PermissionStoreBuiltin],
   createStateCommandProcessor: Boolean => StateCommandProcessor,
   val topicDefaults: TopicDefaults
-) extends Actor
+)(override implicit val timeout: Timeout) extends Actor
   // not using akka's ActorLogging because that's async and everywhere else we use the normal LazyLogging (performance won't matter anyway)
   with ActorPreRestartLog
   with CommandProcessorExtensions

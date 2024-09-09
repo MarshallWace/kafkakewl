@@ -45,7 +45,9 @@ object HttpServerApp extends App
   implicit val system: ActorSystem = ActorSystem("kafkakewl-api")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  // the time-out needs to be longer than usual, because some operations can be really slow (e.g. topic deletion)
+  // the time-out needs to be longer than usual, because
+  // - some operations can be really slow (e.g. topic deletion)
+  // - deployments are queued up and performed sequentially - under load the queueing time might be quite long
   implicit val timeout: Timeout = 10.minutes
 
   val jmpReporter: JmxReporter = JmxReporter.forRegistry(metricRegistry).inDomain("kafkakewl-api").build
