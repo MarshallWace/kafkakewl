@@ -1,0 +1,15 @@
+http:
+  host: 0.0.0.0
+  port: 8080
+
+kafkaCluster:
+  client:
+    brokers: broker1
+    config: {}
+
+kafkaPersistentStore:
+  topic:
+    name: "kewl.persistent-store"
+    config: {}
+    reCreate: false
+  transactionalId: "kewl.persistent-store.transactional-id"

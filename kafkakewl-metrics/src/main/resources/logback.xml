@@ -1,8 +1,6 @@
 <configuration>
     <variable name="LOGBACK_LOCAL_FILE_APPENDER" value="${LOGBACK_LOCAL_FILE_APPENDER:-local-file}" />
-    <variable name="LOGBACK_INSTANCE" value="${LOGBACK_INSTANCE:-develop}" />
-    <variable name="LOGBACK_ENV" value="${LOGBACK_ENV:-dev}" />
-    <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout}" />
+    <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout-json}" />
     <variable name="LOGBACK_LOCALFILE_ROOT" value="${LOGBACK_LOCALFILE_ROOT:-./logs}" />
     <variable name="LOGBACK_LOCALFILE_NAME" value="${LOGBACK_LOCALFILE_NAME:-./com.mwam.kafkakewl.metrics}" />
 
@@ -26,42 +24,8 @@
                 <appendLineSeparator>true</appendLineSeparator>
                 <application>kafkakewl-metrics</application>
                 <version>${MW_APP_TAG_VERSION:-0.0.0}</version>
-                <instance>${LOGBACK_INSTANCE}</instance>
+                <includeMDC>true</includeMDC>
                 <customFields>
-                    <field>
-                        <name>env</name>
-                        <value>${LOGBACK_ENV}</value>
-                    </field>
-                    <field>
-                        <name>userName</name>
-                        <value>%X{userName}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
-                    <field>
-                        <name>correlationId</name>
-                        <value>%X{correlationId}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
-                    <field>
-                        <name>dryRun</name>
-                        <value>%X{dryRun}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
-                    <field>
-                        <name>command</name>
-                        <value>%X{command}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
-                    <field>
-                        <name>change</name>
-                        <value>%X{change}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
-                    <field>
-                        <name>topologyId</name>
-                        <value>%X{topologyId}</value>
-                        <allowEmpty>false</allowEmpty>
-                    </field>
                     <field>
                         <name>stacktrace</name>
                         <value>%ex</value>
