@@ -1,4 +1,4 @@
-name: Build, test and package
+name: Build and test
 on:
   pull_request:
 jobs:
@@ -14,8 +14,6 @@ jobs:
           java-version: 21
           cache: gradle
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: --no-daemon
-      - name: Build, test and package
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build and test
         run: ./gradlew build
