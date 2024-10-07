@@ -53,7 +53,7 @@ node_modules/
 local.properties
 buildSrcTmp/
 distTmp/
-outTmp/
+outTmp
 /test.output
 /kotlin-native/dist
 kotlin-ide/
