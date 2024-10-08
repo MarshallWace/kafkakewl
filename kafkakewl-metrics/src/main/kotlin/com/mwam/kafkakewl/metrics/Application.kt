@@ -48,4 +48,7 @@ fun Application.module(config: Config) {
     }
 
     configureRouting()
+
+    configureHealthyHealthCheck("liveness")
+    configureHealthyHealthCheck("readiness")
 }

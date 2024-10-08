@@ -44,6 +44,22 @@ fun Application.configureMonitoring() {
     }
 }
 
+fun Application.configureHealthCheck(name: String, isHealth: () -> Boolean) {
+    routing {
+        get("/$name", {
+            hidden = true
+        }) {
+            if (isHealth()) {
+                call.respond(HttpStatusCode.OK)
+            } else {
+                call.respond(HttpStatusCode.ServiceUnavailable)
+            }
+        }
+    }
+}
+
+fun Application.configureHealthyHealthCheck(name: String) = configureHealthCheck(name) { true }
+
 fun Application.configureHTTP() {
     install(Compression)
     install(CORS) {
