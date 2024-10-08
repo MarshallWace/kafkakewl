@@ -37,8 +37,6 @@ fun Application.module(config: Config) {
     configureCallLogging()
     configureFrameworks(config)
 
-    log
-
     environment.monitor.subscribe(ApplicationStopped) { application ->
         application.environment.log.info("Ktor server has stopped")
         // TODO can this be done in a better way?
@@ -47,4 +45,7 @@ fun Application.module(config: Config) {
     }
 
     configureRouting()
+
+    configureHealthyHealthCheck("liveness")
+    configureHealthyHealthCheck("readiness")
 }
