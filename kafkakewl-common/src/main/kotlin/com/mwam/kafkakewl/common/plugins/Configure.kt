@@ -46,7 +46,7 @@ fun Application.configureMonitoring() {
 
 fun Application.configureHealthCheck(name: String, isHealth: () -> Boolean) {
     routing {
-        get("/$name", {
+        get(name, {
             hidden = true
         }) {
             if (isHealth()) {

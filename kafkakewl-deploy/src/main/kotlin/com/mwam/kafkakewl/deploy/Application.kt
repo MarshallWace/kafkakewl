@@ -46,6 +46,6 @@ fun Application.module(config: Config) {
 
     configureRouting()
 
-    configureHealthyHealthCheck("live")
-    configureHealthyHealthCheck("ready")
+    configureHealthyHealthCheck("/health/live")
+    configureHealthyHealthCheck("/health/ready")
 }
