@@ -3,6 +3,7 @@ http:
   port: 8080
 
 kafkaCluster:
+  name: test
   client:
     brokers: broker1
     config: {}

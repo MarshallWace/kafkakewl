@@ -28,6 +28,11 @@ import io.micrometer.prometheus.*
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
+/** initializes the logging, sets some logback variables */
+fun initializeLogging(kafkaClusterName: String) {
+    System.setProperty("LOGBACK_KAFKA_CLUSTER", kafkaClusterName)
+}
+
 fun Application.configureMonitoring() {
     val appMicrometerRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
 

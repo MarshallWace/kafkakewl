@@ -3,6 +3,7 @@
     <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout-json}" />
     <variable name="LOGBACK_LOCALFILE_ROOT" value="${LOGBACK_LOCALFILE_ROOT:-./logs}" />
     <variable name="LOGBACK_LOCALFILE_NAME" value="${LOGBACK_LOCALFILE_NAME:-./com.mwam.kafkakewl.metrics}" />
+    <variable name="LOGBACK_KAFKA_CLUSTER" value="${LOGBACK_KAFKA_CLUSTER:-na}" />
 
     <!-- changing a kafka-log messages' levels, etc... to reduce warn/error logs when it's unnecessary -->
     <turboFilter class="com.mwam.kafkakewl.utils.logging.LogFilter">
@@ -26,6 +27,10 @@
                 <version>${MW_APP_TAG_VERSION:-0.0.0}</version>
                 <includeMDC>true</includeMDC>
                 <customFields>
+                    <field>
+                        <name>kafkaCluster</name>
+                        <value>${LOGBACK_KAFKA_CLUSTER}</value>
+                    </field>
                     <field>
                         <name>stacktrace</name>
                         <value>%ex</value>

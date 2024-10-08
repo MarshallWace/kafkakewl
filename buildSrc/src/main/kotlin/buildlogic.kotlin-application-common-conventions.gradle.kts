@@ -9,6 +9,7 @@ val prometheus_version: String by project
 val koin_version: String by project
 val kotlin_kafka_version: String by project
 val kafka_version: String by project
+val hoplite_version: String by project
 
 plugins {
     // Apply the common convention plugin for shared build configuration between library and application projects.
@@ -39,4 +40,6 @@ dependencies {
     implementation("io.github.nomisrev:kotlin-kafka:$kotlin_kafka_version")
     implementation("org.apache.kafka:kafka-clients:$kafka_version")
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktor_version")
+    implementation("com.sksamuel.hoplite:hoplite-core:$hoplite_version")
+    implementation("com.sksamuel.hoplite:hoplite-yaml:$hoplite_version")
 }

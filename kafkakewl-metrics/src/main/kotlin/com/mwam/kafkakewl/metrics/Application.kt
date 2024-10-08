@@ -6,10 +6,10 @@
 
 package com.mwam.kafkakewl.metrics
 
+import com.mwam.kafkakewl.common.config.loadConfig
 import com.mwam.kafkakewl.common.plugins.*
 import com.mwam.kafkakewl.metrics.plugins.*
 import com.mwam.kafkakewl.metrics.services.KafkaTopicInfoSource
-import com.sksamuel.hoplite.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -17,13 +17,8 @@ import org.koin.ktor.ext.inject
 import kotlin.getValue
 
 fun main() {
-    val config = ConfigLoaderBuilder.default()
-        // TODO this fails currently because there are weird env vars on my linux box
-        //.addEnvironmentSource(useUnderscoresAsSeparator = true)
-        .addFileSource(".kafkakewl-metrics-overrides-application.yaml")
-        .addResourceSource("/application.yaml")
-        .build()
-        .loadConfigOrThrow<Config>()
+    val config = loadConfig<Config>(".kafkakewl-metrics-overrides-application.yaml", "/application.yaml")
+    initializeLogging(config.kafkaCluster.name)
 
     embeddedServer(Netty, port = config.http.port, host = config.http.host, module = { module(config) })
         .start(wait = true)
