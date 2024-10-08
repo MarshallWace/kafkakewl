@@ -27,10 +27,11 @@ fun main() {
 fun Application.module(config: Config) {
     configureSecurity()
     configureHTTP()
-    configureMonitoring()
     configureSerialization()
     configureCallLogging()
     configureFrameworks(config)
+    configureMonitoring()
+    configureCoreMetrics(config.kafkaCluster.name)
 
     val kafkaTopicInfoSource by inject<KafkaTopicInfoSource>()
     kafkaTopicInfoSource.startPublishing()

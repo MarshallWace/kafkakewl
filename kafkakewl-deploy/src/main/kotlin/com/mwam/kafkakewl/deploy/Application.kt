@@ -24,10 +24,11 @@ fun main() {
 fun Application.module(config: Config) {
     configureSecurity()
     configureHTTP()
-    configureMonitoring()
     configureSerialization()
     configureCallLogging()
     configureFrameworks(config)
+    configureMonitoring()
+    configureCoreMetrics(config.kafkaCluster.name)
 
     environment.monitor.subscribe(ApplicationStopped) { application ->
         application.environment.log.info("Ktor server has stopped")
