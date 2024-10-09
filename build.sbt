@@ -235,3 +235,20 @@ lazy val `kewl-api-metrics` = (project in file("kewl-api-metrics"))
     libraryDependencies ++= moduleIdsFromEnvVar("KAFKAKEWL_API_METRICS_EXTENSIONS"),
     libraryDependencies ++= moduleIdsFromFiles(file(".kewl-api-metrics-extensions").getAbsoluteFile, Path.userHome / ".kewl-api-metrics-extensions")
   )
+
+lazy val `kewl-api-migrate` = (project in file("kewl-migrate"))
+  .enablePlugins(JavaAppPackaging, AutomateHeaderPlugin)
+  .dependsOn(`kewl-utils`, `kewl-kafka-utils`, `kewl-extensions`, `kewl-extensions-builtin`, `kewl-domain`, `kewl-common`, `kewl-state-processor`, `kewl-kafkacluster-processor`)
+  .settings(
+    name := "kewl-migrate",
+    headerLicense := license,
+    mainClass in (Compile, stage) := Some("com.mwam.kafkakewl.migrate.HttpServerApp"),
+    scriptClasspath in bashScriptDefines ~= (cp => "extensions/*.jar" +: cp),
+    libraryDependencies ++= configDeps ++ catsDeps ++ loggingDeps ++ loggingImplDeps ++ akkaDeps ++ akkaHttpDeps
+      ++ jsonDeps ++ kafkaDeps ++ miscDeps ++ testDeps ++ metricsDeps,
+    libraryDependencies += "com.github.pathikrit" %% "better-files" % "3.9.2",
+    libraryDependencies += "com.lihaoyi" %% "requests" % "0.9.0",
+
+    libraryDependencies ++= moduleIdsFromEnvVar("KAFKAKEWL_MIGRATE_EXTENSIONS"),
+    libraryDependencies ++= moduleIdsFromFiles(file(".kewl-migrate-extensions").getAbsoluteFile, Path.userHome / ".kewl-api-migrate-extensions")
+  )
