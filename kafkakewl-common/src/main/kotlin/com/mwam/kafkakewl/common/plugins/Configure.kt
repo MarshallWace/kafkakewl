@@ -26,16 +26,28 @@ import io.ktor.server.request.path
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micrometer.prometheus.*
 import kotlinx.serialization.json.Json
+import org.koin.core.module.Module
+import org.koin.dsl.module
 import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 
 /** initializes the logging, sets some logback variables */
 fun initializeLogging(kafkaClusterName: String) {
     System.setProperty("LOGBACK_KAFKA_CLUSTER", kafkaClusterName)
+}
+
+/** creates a koin module with the metrics' PrometheusMeterRegistry */
+fun koinModuleForMetrics(): Module {
+    val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    return module {
+        single<MeterRegistry> { meterRegistry }
+        single<PrometheusMeterRegistry> { meterRegistry }
+    }
 }
 
 fun Application.configureMonitoring() {
