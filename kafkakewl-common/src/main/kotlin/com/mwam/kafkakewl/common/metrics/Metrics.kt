@@ -7,5 +7,5 @@
 package com.mwam.kafkakewl.common.metrics
 
 fun metricsName(name: String): String {
-    return "kafkakewl_vext_$name";
+    return "kafkakewl_vnext_$name";
 }
