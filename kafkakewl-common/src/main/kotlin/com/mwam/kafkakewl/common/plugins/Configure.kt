@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.common.plugins
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.mwam.kafkakewl.common.metrics.metricsName
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.json
@@ -24,8 +25,15 @@ import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Tag
+import io.micrometer.core.instrument.config.MeterFilter
 import io.micrometer.prometheus.*
 import kotlinx.serialization.json.Json
+import org.koin.core.module.Module
+import org.koin.dsl.module
+import org.koin.ktor.ext.inject
 import org.slf4j.event.Level
 
 /** initializes the logging, sets some logback variables */
@@ -33,20 +41,42 @@ fun initializeLogging(kafkaClusterName: String) {
     System.setProperty("LOGBACK_KAFKA_CLUSTER", kafkaClusterName)
 }
 
+/** creates a koin module with the metrics' PrometheusMeterRegistry */
+fun koinModuleForMetrics(): Module {
+    val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    return module {
+        single<MeterRegistry> { meterRegistry }
+        single<PrometheusMeterRegistry> { meterRegistry }
+    }
+}
+
 fun Application.configureMonitoring() {
-    val appMicrometerRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    val meterRegistry by inject<PrometheusMeterRegistry>()
 
     install(MicrometerMetrics) {
-        registry = appMicrometerRegistry
+        registry = meterRegistry
         // ...
     }
     routing {
         get("/metrics", {
             hidden = true
         }) {
-            call.respond(appMicrometerRegistry.scrape())
+            call.respond(meterRegistry.scrape())
         }
     }
+}
+
+fun Application.configureCoreMetrics(kafkaClusterName: String) {
+    val meterRegistry by inject<PrometheusMeterRegistry>()
+
+    // registering the kafka-cluster name as a common metrics tag
+    meterRegistry.config().meterFilter(MeterFilter.commonTags(listOf(Tag.of("kafka_cluster", kafkaClusterName))))
+
+    var startTimeMillis = System.currentTimeMillis()
+
+    Gauge.builder(metricsName("uptime"), { System.currentTimeMillis() - startTimeMillis })
+        .description("the up-time of the service in milliseconds")
+        .register(meterRegistry)
 }
 
 fun Application.configureHealthCheck(name: String, isHealth: () -> Boolean) {
