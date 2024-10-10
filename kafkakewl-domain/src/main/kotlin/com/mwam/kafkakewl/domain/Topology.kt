@@ -6,7 +6,9 @@
 
 package com.mwam.kafkakewl.domain
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Duration
 
 /** The fully qualified topic id (currently the same as the topic name). */
 @JvmInline
@@ -34,10 +36,10 @@ data class Topic(
     val config: Map<TopicConfigKey, TopicConfigValue> = emptyMap(),
     val unManaged: Boolean = false,
     val description: String? = null,
-    val allowConsumeFor: List<Matcher> = emptyList(),
-    val allowProduceFor: List<Matcher> = emptyList(),
-    val tags: List<String> = emptyList(),           // only for migrating existing topologies
-    val labels: Map<String, String> = emptyMap()    // only for migrating existing topologies
+    val canBeConsumed: List<Matcher> = emptyList(),
+    val canBeProduced: List<Matcher> = emptyList(),
+    val tags: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap()
 ) {
 
     /** The topic's fully qualified id is the same as the name. */
@@ -53,10 +55,31 @@ value class ApplicationLocalId(override val value: String) : StringValue
 @Serializable
 value class UserId(override val value: String) : StringValue
 
+@JvmInline
 @Serializable
+value class Host(override val value: String) : StringValue
+
+/** This does not need to be Serializable because the Application is serialized via the ApplicationSurrogate */
+sealed interface ApplicationType
+object ApplicationTypes {
+    data class Simple(val consumerGroup: String? = null, val transactionalId: String? = null) : ApplicationType
+    data class KafkaStreams(val kafkaStreamsAppId: String) : ApplicationType
+    data class Connector(val connector: String) : ApplicationType
+    data class ConnectReplicator(val connectReplicator: String) : ApplicationType // TODO remove legacy
+}
+
+@Serializable(with = ApplicationSerializer::class)
 data class Application(
-    val id: ApplicationLocalId, val user: UserId
-    // TODO different application types
+    val id: ApplicationLocalId,
+    val user: UserId,
+    val type: ApplicationType,
+    val host: Host? = null,
+    val description: String? = null,
+    val canConsume: List<Matcher> = emptyList(),
+    val canProduce: List<Matcher> = emptyList(),
+    val consumerLagWindowSeconds: Int? = null, // TODO is this the best way to configure the consumer status logic? Maybe a separate sub-object in case we want more fields?
+    val tags: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap()
 )
 
 /** The local topic alias id in the current topology's namespace (fully qualified isn't really needed anyway because aliases aren't currently exposed
@@ -147,8 +170,8 @@ data class Topology(
     val applications: List<Application> = emptyList(),
     val aliases: Aliases = Aliases(),
     val relationships: List<Relationship> = emptyList(),
-    val tags: List<String> = emptyList(),           // only for migrating existing topologies
-    val labels: Map<String, String> = emptyMap()    // only for migrating existing topologies
+    val tags: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap()
 )
 
 typealias Topologies = Map<TopologyId, Topology>
