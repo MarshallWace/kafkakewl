@@ -36,8 +36,8 @@ data class Topic(
     val config: Map<TopicConfigKey, TopicConfigValue> = emptyMap(),
     val unManaged: Boolean = false,
     val description: String? = null,
-    val canBeConsumed: List<Matcher> = emptyList(),
-    val canBeProduced: List<Matcher> = emptyList(),
+    val canBeConsumedBy: List<Matcher> = emptyList(),
+    val canBeProducedBy: List<Matcher> = emptyList(),
     val tags: List<String> = emptyList(),
     val labels: Map<String, String> = emptyMap()
 ) {
@@ -92,8 +92,7 @@ value class TopicAliasLocalId(override val value: String) : StringValue
 @Serializable
 data class TopicAlias(
     val id: TopicAliasLocalId,
-    // TODO perhaps support other ways, e.g. list of topic ids, namespace? Although all these are expressible with regex easily
-    val regex: String
+    val match: List<Matcher>
 )
 
 /** The local application alias id in the current topology's namespace (fully qualified isn't really needed anyway because aliases aren't currently
@@ -106,8 +105,7 @@ value class ApplicationAliasLocalId(override val value: String) : StringValue
 @Serializable
 data class ApplicationAlias(
     val id: ApplicationAliasLocalId,
-    // TODO perhaps support other ways, e.g. list of topic ids, namespace? Although all these are expressible with regex easily
-    val regex: String
+    val match: List<Matcher>
 )
 
 @Serializable
@@ -129,10 +127,18 @@ value class ApplicationFlexId(override val value: String) : StringValue
 value class TopicFlexId(override val value: String) : StringValue
 
 @Serializable
-data class ProducedTopic(val topic: TopicFlexId)
+data class ProducedTopic(
+    val topic: TopicFlexId,
+    val tags: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap()
+)
 
 @Serializable
-data class ConsumedTopic(val topic: TopicFlexId)
+data class ConsumedTopic(
+    val topic: TopicFlexId,
+    val monitorConsumerLag: Boolean = true,
+    val tags: List<String> = emptyList(),
+    val labels: Map<String, String> = emptyMap())
 
 @Serializable
 data class Relationship(

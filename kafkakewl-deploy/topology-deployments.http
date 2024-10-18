@@ -69,6 +69,11 @@ Content-Type: application/json
   ]
 }
 
+
 ### Getting all topology deployments
 GET localhost:8080/api/v1/deployments
+Accept: application/json
+
+### Getting all topology deployments without the topologies
+GET localhost:8080/api/v1/deployments-compact
 Accept: application/json

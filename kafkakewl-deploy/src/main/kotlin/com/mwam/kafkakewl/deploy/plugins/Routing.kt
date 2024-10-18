@@ -6,16 +6,9 @@
 
 package com.mwam.kafkakewl.deploy.plugins
 
-import arrow.core.Either.Left
-import arrow.core.Either.Right
-import com.mwam.kafkakewl.deploy.services.TopologyDeploymentsService
-import com.mwam.kafkakewl.domain.Deployments
-import com.mwam.kafkakewl.domain.DeploymentsFailure
-import com.mwam.kafkakewl.domain.DeploymentsSuccess
-import com.mwam.kafkakewl.domain.Failure
-import com.mwam.kafkakewl.domain.TopologyDeployment
-import com.mwam.kafkakewl.domain.TopologyDeploymentQuery
-import com.mwam.kafkakewl.domain.TopologyId
+import arrow.core.Either.*
+import com.mwam.kafkakewl.deploy.services.*
+import com.mwam.kafkakewl.domain.*
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.dsl.*
@@ -23,14 +16,33 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import io.ktor.server.request.receive
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.webjars.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.slf4j.MDCContext
-import kotlinx.coroutines.withContext
 import org.koin.ktor.ext.inject
+
+/** extracts the filter/offset/limit query parameters from the request */
+fun ApplicationRequest.extractTopologyDeploymentQuery(): TopologyDeploymentQuery {
+    val filter = call.request.queryParameters["filter"]
+    // TODO better parse error handling
+    val offset = call.request.queryParameters["offset"]?.toInt()
+    val limit = call.request.queryParameters["limit"]?.toInt()
+    return TopologyDeploymentQuery(filter, offset, limit)
+}
+
+/** describes the filter/offset/limit query parameters for an OpenApi request */
+fun OpenApiRequest.queryParametersForTopologyDeploymentQuery() {
+    queryParameter<String?>("filter") {
+        description = "An optional regular expression filter for the topology id"
+    }
+    queryParameter<Int?>("offset") {
+        description = "The optional offset (defaults to 0) from which the topology deployments should be returned"
+    }
+    queryParameter<Int?>("limit") {
+        description = "The optional limit (unspecified means no limit) of topology deployments to return"
+    }
+}
 
 fun Application.configureRouting() {
     install(Webjars) {
@@ -54,8 +66,9 @@ fun Application.configureRouting() {
     }
     routing {
         val topologyDeploymentsService by inject<TopologyDeploymentsService>()
+
         route("/api/v1") {
-            get("/deployment/{topologyId}", {
+            get("/deployments/{topologyId}", {
                 description = "Returns the specified topology"
                 request {
                     pathParameter<String>("topologyId") {
@@ -86,18 +99,7 @@ fun Application.configureRouting() {
             get("/deployments", {
                 description = "Returns the deployments for the optional filter parameters"
                 request {
-                    queryParameter<String?>("filter") {
-                        description = "An optional regular expression filter for the topology id"
-                    }
-                    queryParameter<Boolean?>("with_topology") {
-                        description = "Whether the topology should be returned with the deployment or not (defaults to 'true')"
-                    }
-                    queryParameter<Int?>("offset") {
-                        description = "The optional offset (defaults to 0) from which the topology deployments should be returned"
-                    }
-                    queryParameter<Int?>("limit") {
-                        description = "The optional limit (unspecified means no limit) of topology deployments to return"
-                    }
+                    queryParametersForTopologyDeploymentQuery()
                 }
                 response {
                     HttpStatusCode.OK to {
@@ -107,15 +109,30 @@ fun Application.configureRouting() {
                     }
                 }
             }) {
-                val filter = call.request.queryParameters["filter"]
-                // TODO better parse error handling
-                val withTopology = call.request.queryParameters["with_topology"]?.toBoolean()
-                val offset = call.request.queryParameters["offset"]?.toInt()
-                val limit = call.request.queryParameters["limit"]?.toInt()
-                withLoggingContext("filter" to filter, "withTopology" to withTopology?.toString(), "offset" to offset?.toString(), "limit" to limit?.toString()) {
-                    val topologyDeploymentFilter = TopologyDeploymentQuery(filter, withTopology, offset, limit)
-                    val deployments = topologyDeploymentsService.getTopologyDeployments(topologyDeploymentFilter)
+                val query = call.request.extractTopologyDeploymentQuery()
+                withLoggingContext("filter" to query.topologyIdFilterRegex, "offset" to query.offset?.toString(), "limit" to query.limit?.toString()) {
+                    val deployments = topologyDeploymentsService.getTopologyDeployments(query)
                     call.respond(deployments)
+                }
+            }
+            get("/deployments-compact", {
+                description = "Returns the compact deployments (without the actual topology) for the optional filter parameters"
+                request {
+                    queryParametersForTopologyDeploymentQuery()
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "The requested topology deployments have been returned"
+                        body<List<TopologyDeploymentCompact>> {
+                        }
+                    }
+                }
+            }) {
+                val query = call.request.extractTopologyDeploymentQuery()
+                withLoggingContext("filter" to query.topologyIdFilterRegex, "offset" to query.offset?.toString(), "limit" to query.limit?.toString()) {
+                    val deployments = topologyDeploymentsService.getTopologyDeployments(query)
+                    val deploymentsCompact = deployments.map { it.toCompact() }
+                    call.respond(deploymentsCompact)
                 }
             }
             post("/deployments", {

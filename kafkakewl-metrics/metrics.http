@@ -1,7 +1,7 @@
 ### Getting all topics
-GET localhost:8080/api/v1/topic
+GET localhost:8080/api/v1/topic-names
 Accept: application/json
 
 ### Getting a topic's metadata
-GET localhost:8080/api/v1/topic/kewltest.vnext.persistent-store
+GET localhost:8080/api/v1/topics/kewltest.vnext.persistent-store
 Accept: application/json

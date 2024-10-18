@@ -6,9 +6,9 @@
 
 package com.mwam.kafkakewl.metrics.plugins
 
-import com.mwam.kafkakewl.domain.Failure
-import com.mwam.kafkakewl.metrics.domain.KafkaSingleTopicPartitionInfos
-import com.mwam.kafkakewl.metrics.services.KafkaTopicInfoCache
+import com.mwam.kafkakewl.domain.*
+import com.mwam.kafkakewl.metrics.domain.*
+import com.mwam.kafkakewl.metrics.services.*
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.dsl.*
