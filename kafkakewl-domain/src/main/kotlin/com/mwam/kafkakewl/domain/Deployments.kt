@@ -34,7 +34,9 @@ data class Deployments(
 
 @Serializable
 data class TopologyDeploymentQuery(
-    val topologyIdFilterRegex: String?, val withTopology: Boolean?, val offset: Int?, val limit: Int?
+    val topologyIdFilterRegex: String?,
+    val offset: Int?,
+    val limit: Int?
 )
 
 @Serializable
@@ -49,14 +51,36 @@ data class TopologyDeploymentStatus(
  * @param status
  *   the deployment status
  * @param topology
- *   the optional topology, none means the topology is removed
+ *   the optional topology, null means the topology is removed
  */
 @Serializable
 data class TopologyDeployment(
-    val topologyId: TopologyId, val status: TopologyDeploymentStatus, val topology: Topology?
-)
+    val topologyId: TopologyId,
+    val status: TopologyDeploymentStatus,
+    val topology: Topology?
+) {
+    fun toCompact(): TopologyDeploymentCompact = TopologyDeploymentCompact(topologyId, status, topology != null)
+}
 
 typealias TopologyDeployments = Map<TopologyId, TopologyDeployment>
+
+/** The compact deployment of a topology (it does not contain the topology)
+ *
+ * @param topologyId
+ *   the topology id
+ * @param status
+ *   the deployment status
+ * @param isDeployed
+ *   true if the topology is deployed, false if it's removed
+ */
+@Serializable
+data class TopologyDeploymentCompact(
+    val topologyId: TopologyId,
+    val status: TopologyDeploymentStatus,
+    val isDeployed: Boolean
+)
+
+typealias TopologyDeploymentsCompact = Map<TopologyId, TopologyDeploymentCompact>
 
 /** Base interface for failures while querying deployments. */
 sealed interface QueryDeploymentsFailure

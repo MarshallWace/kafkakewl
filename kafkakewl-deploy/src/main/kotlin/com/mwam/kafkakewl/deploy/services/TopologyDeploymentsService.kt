@@ -48,7 +48,7 @@ class TopologyDeploymentsServiceImpl private constructor(
     override suspend fun deploy(deployments: Deployments): Either<PostDeploymentsFailure, DeploymentsSuccess> {
         logger.info { "Trying to enter the deploy-mutex..." }
         mutex.withLock {
-            val deploymentsLog = "${deployments.deploy.map { it.id }}, deleting ${deployments.delete} with options = ${deployments.options}"
+            val deploymentsLog = "${deployments.deploy.size}, deleting ${deployments.delete.size} topologies with options = ${deployments.options} (deploying ${deployments.deploy.map { it.id }}, deleting ${deployments.delete})"
             logger.info { "Deploying $deploymentsLog..." }
 
             // TODO authorization
@@ -77,9 +77,19 @@ class TopologyDeploymentsServiceImpl private constructor(
         }
     }
 
-    override fun getTopologyDeployments(topologyDeploymentQuery: TopologyDeploymentQuery): List<TopologyDeployment> {
-        // TODO use the query
-        return topologyDeploymentsRef.get().values.toList()
+    override fun getTopologyDeployments(query: TopologyDeploymentQuery): List<TopologyDeployment> {
+        // getting the filtered, ordered list of topology deployments
+        val filterRegexOrNull = query.topologyIdFilterRegex?.toRegex()
+        val topologyDeployments = topologyDeploymentsRef.get().values
+            .filter { filterRegexOrNull == null || filterRegexOrNull.matches(it.topologyId.value) }
+            .sortedBy { it.topologyId.value }
+
+        // selecting a range based on offset/limit
+        val fromIndex = query.offset ?: 0
+        val toIndex = (query.limit?.let { it + fromIndex } ?: topologyDeployments.size).coerceAtMost(topologyDeployments.size)
+        return topologyDeployments
+            .subList(fromIndex, toIndex)
+            .toList()
     }
 
     override fun getTopologyDeployment(id: TopologyId): TopologyDeployment? = topologyDeploymentsRef.get()[id]
