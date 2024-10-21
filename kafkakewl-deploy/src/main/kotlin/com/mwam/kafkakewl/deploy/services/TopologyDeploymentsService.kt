@@ -48,7 +48,7 @@ class TopologyDeploymentsServiceImpl private constructor(
     override suspend fun deploy(deployments: Deployments): Either<PostDeploymentsFailure, DeploymentsSuccess> {
         logger.info { "Trying to enter the deploy-mutex..." }
         mutex.withLock {
-            val deploymentsLog = "${deployments.deploy.map { it.id }}, deleting ${deployments.delete} with options = ${deployments.options}"
+            val deploymentsLog = "${deployments.deploy.size}, deleting ${deployments.delete.size} topologies with options = ${deployments.options} (deploying ${deployments.deploy.map { it.id }}, deleting ${deployments.delete})"
             logger.info { "Deploying $deploymentsLog..." }
 
             // TODO authorization
