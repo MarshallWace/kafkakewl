@@ -11,11 +11,13 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.mwam.kafkakewl.common.metrics.metricsName
 import io.github.smiley4.ktorswaggerui.dsl.*
 import io.ktor.http.*
+import io.ktor.serialization.JsonConvertException
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.metrics.micrometer.*
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.callloging.CallLogging
 import io.ktor.server.plugins.callloging.processingTimeMillis
 import io.ktor.server.plugins.compression.*
@@ -23,6 +25,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
+import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Gauge
@@ -49,6 +52,22 @@ fun koinModuleForMetrics(): Module {
         single<PrometheusMeterRegistry> { meterRegistry }
     }
 }
+
+suspend inline fun <reified T : Any> ApplicationCall.receiveWithDeserializationError(): T =
+    try {
+        receive<T>()
+    } catch (e: BadRequestException) {
+        if (e.cause is JsonConvertException) {
+            val cause = e.cause!!
+            val message = cause.message ?: cause.javaClass.simpleName
+            application.log.warn(message)
+            respond(HttpStatusCode.BadRequest, message)
+            throw BadRequestException(message, cause)
+        }
+        else {
+            throw e
+        }
+    }
 
 fun Application.configureMonitoring() {
     val meterRegistry by inject<PrometheusMeterRegistry>()

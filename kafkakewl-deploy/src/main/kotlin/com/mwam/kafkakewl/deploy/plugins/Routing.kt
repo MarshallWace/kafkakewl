@@ -7,6 +7,7 @@
 package com.mwam.kafkakewl.deploy.plugins
 
 import arrow.core.Either.*
+import com.mwam.kafkakewl.common.plugins.receiveWithDeserializationError
 import com.mwam.kafkakewl.deploy.services.*
 import com.mwam.kafkakewl.domain.*
 import io.github.oshai.kotlinlogging.withLoggingContext
@@ -165,7 +166,7 @@ fun Application.configureRouting() {
                     }
                 }
             }) {
-                val deployments = call.receive<Deployments>()
+                val deployments = call.receiveWithDeserializationError<Deployments>()
                 // TODO add other fields into the MDC
                 withLoggingContext("dryRun" to deployments.options.dryRun.toString(), "allowUnsafe" to deployments.options.allowUnsafe.toString()) {
                     val deploymentResult = topologyDeploymentsService.deploy(deployments)
