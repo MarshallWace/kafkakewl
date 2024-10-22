@@ -236,7 +236,7 @@ lazy val `kewl-api-metrics` = (project in file("kewl-api-metrics"))
     libraryDependencies ++= moduleIdsFromFiles(file(".kewl-api-metrics-extensions").getAbsoluteFile, Path.userHome / ".kewl-api-metrics-extensions")
   )
 
-lazy val `kewl-api-migrate` = (project in file("kewl-migrate"))
+lazy val `kewl-migrate` = (project in file("kewl-migrate"))
   .enablePlugins(JavaAppPackaging, AutomateHeaderPlugin)
   .dependsOn(`kewl-utils`, `kewl-kafka-utils`, `kewl-extensions`, `kewl-extensions-builtin`, `kewl-domain`, `kewl-common`, `kewl-state-processor`, `kewl-kafkacluster-processor`)
   .settings(
@@ -250,5 +250,5 @@ lazy val `kewl-api-migrate` = (project in file("kewl-migrate"))
     libraryDependencies += "com.lihaoyi" %% "requests" % "0.9.0",
 
     libraryDependencies ++= moduleIdsFromEnvVar("KAFKAKEWL_MIGRATE_EXTENSIONS"),
-    libraryDependencies ++= moduleIdsFromFiles(file(".kewl-migrate-extensions").getAbsoluteFile, Path.userHome / ".kewl-api-migrate-extensions")
+    libraryDependencies ++= moduleIdsFromFiles(file(".kewl-migrate-extensions").getAbsoluteFile, Path.userHome / ".kewl-migrate-extensions")
   )
