@@ -108,9 +108,13 @@ logs/
 .kafkakewl-api-overrides.conf
 .kafkakewl-api-metrics-defaults.conf
 .kafkakewl-api-metrics-overrides.conf
+.kafkakewl-migrate-defaults.conf
+.kafkakewl-migrate-overrides.conf
 .kafkakewl-stateadaptor-defaults.conf
 .kafkakewl-stateadaptor-overrides.conf
 
 .bsp/
 
 .sbt/
+
+migrated-topologies

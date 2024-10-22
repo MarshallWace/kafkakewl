@@ -1,0 +1,92 @@
+<configuration>
+    <variable name="LOGBACK_LOCAL_FILE_APPENDER" value="${LOGBACK_LOCAL_FILE_APPENDER:-local-file}" />
+    <variable name="LOGBACK_INSTANCE" value="${LOGBACK_INSTANCE:-develop}" />
+    <variable name="LOGBACK_ENV" value="${LOGBACK_ENV:-dev}" />
+    <variable name="LOGBACK_STDOUT_APPENDER" value="${LOGBACK_STDOUT_APPENDER:-stdout}" />
+    <variable name="LOGBACK_STDERR_APPENDER" value="${LOGBACK_STDERR_APPENDER:-nop}" />
+    <variable name="LOGBACK_LOCALFILE_ROOT" value="${LOGBACK_LOCALFILE_ROOT:-./logs}" />
+
+    <!-- changing a kafka-log messages's levels, etc... to reduce warn/error logs when it's unnecessary -->
+    <turboFilter class="com.mwam.kafkakewl.utils.LogFilter">
+    </turboFilter>
+
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.out</target>
+        <encoder>
+            <pattern>%date{ISO8601} [%X{kafkaClusterId}] [%-5level] %logger{0}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="stdout_json" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="com.mwam.logback.JsonLayout">
+                <jsonFormatter class="ch.qos.logback.contrib.jackson.JacksonJsonFormatter"/>
+                <timestampFormat>yyyy-MM-dd'T'HH:mm:ss.SSS</timestampFormat>
+                <timestampFormatTimezoneId>UTC</timestampFormatTimezoneId>
+                <appendLineSeparator>true</appendLineSeparator>
+                <application>kafkakewl-migrate</application>
+                <version>${MW_APP_TAG_VERSION}</version>
+                <includeMDC>true</includeMDC>
+                <instance>${LOGBACK_INSTANCE}</instance>
+                <customFields>
+                    <field>
+                        <name>env</name>
+                        <value>${LOGBACK_ENV}</value>
+                    </field>
+                    <field>
+                        <name>stacktrace</name>
+                        <value>%ex</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>logger</name>
+                        <value>%logger{0}</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>class</name>
+                        <value>%class</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>package</name>
+                        <value>%.-18logger</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                    <field>
+                        <name>method</name>
+                        <value>%method</value>
+                        <allowEmpty>false</allowEmpty>
+                    </field>
+                </customFields>
+            </layout>
+        </encoder>
+    </appender>
+
+    <appender name="stderr" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <encoder>
+            <pattern>%date{ISO8601} [%X{kafkaClusterId}] [%-5level] %logger{0}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="local-file" class="ch.qos.logback.core.FileAppender">
+        <file>${LOGBACK_LOCALFILE_ROOT}/com.mwam.kafkakewl.migrate/com.mwam.kafkakewl.migrate.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%date{ISO8601} [%X{kafkaClusterId}] [%-5level] %logger{0}: %msg %ex%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="nop" class="ch.qos.logback.core.helpers.NOPAppender">
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="${LOGBACK_STDOUT_APPENDER}"/>
+        <appender-ref ref="${LOGBACK_STDERR_APPENDER}"/>
+        <appender-ref ref="${LOGBACK_LOCAL_FILE_APPENDER}" />
+    </root>
+</configuration>

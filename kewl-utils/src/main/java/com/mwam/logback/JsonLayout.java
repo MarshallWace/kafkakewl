@@ -52,6 +52,7 @@ public class JsonLayout extends JsonLayoutBase<ILoggingEvent> {
     private String application;
     private String version;
     private String instance;
+    private boolean includeMDC;
 
     // a field definition in logback.xml
     public static class Field {
@@ -182,6 +183,14 @@ public class JsonLayout extends JsonLayoutBase<ILoggingEvent> {
         this.instance = instance;
     }
 
+    public boolean isIncludeMDC() {
+        return includeMDC;
+    }
+
+    public void setIncludeMDC(boolean includeMDC) {
+        this.includeMDC = includeMDC;
+    }
+
     // support for exception formatting
     @Override
     public void start() {
@@ -252,6 +261,11 @@ public class JsonLayout extends JsonLayoutBase<ILoggingEvent> {
                 }
             }
         } catch (Exception ignore) {
+        }
+
+        // mdc fields
+        if (includeMDC) {
+            map.putAll(event.getMDCPropertyMap());
         }
 
         // standard logging fields
