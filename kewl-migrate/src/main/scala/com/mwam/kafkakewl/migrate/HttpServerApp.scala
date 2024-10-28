@@ -128,7 +128,7 @@ object HttpServerApp extends App
     vnextInstances
       .foreach { case (kafkaClusterId, urlTemplate) =>
         withMDC(mdc(kafkaClusterId)) {
-          val vnextClient = VnextClient(kafkaClusterId, urlTemplate)
+          val vnextClient = VnextClient(kafkaClusterId, urlTemplate, vnextConnectTimeoutMillis, vnextReadTimeoutMillis)
           val actualVnextTopologIds = vnextClient.getDeployedTopologyIds
           val desiredVnextTopologies = desiredVnextTopologiesByKafkaCluster.getOrElse(kafkaClusterId, Map.empty)
           // We'll deploy all current migrated topologies (they may already be deployed to vnext, but that's fine, it's idempotent)
@@ -166,7 +166,8 @@ object HttpServerApp extends App
           case Some(DeployedTopologyMigrateResult.Delete(topologyId)) => VnextDeployment(deploy = Seq.empty, delete = Seq(topologyId)).some
           case None => none
         }
-        vnextDeployment.foreach(VnextClient(kafkaClusterId, vnextInstances(kafkaClusterId)).deploy(saveDeploymentJson))
+        val vnextClient = VnextClient(kafkaClusterId, vnextInstances(kafkaClusterId), vnextConnectTimeoutMillis, vnextReadTimeoutMillis)
+        vnextDeployment.foreach(vnextClient.deploy(saveDeploymentJson))
       }
     }
   }
@@ -190,7 +191,8 @@ object HttpServerApp extends App
           case Some(DeployedTopologyMigrateResult.Delete(topologyId)) => VnextDeployment(deploy = Seq.empty, delete = Seq(topologyId)).some
           case None => none
         }
-        vnextDeployment.foreach(VnextClient(kafkaClusterId, vnextInstances(kafkaClusterId)).deploy(saveDeploymentJson))
+        val vnextClient = VnextClient(kafkaClusterId, vnextInstances(kafkaClusterId), vnextConnectTimeoutMillis, vnextReadTimeoutMillis)
+        vnextDeployment.foreach(vnextClient.deploy(saveDeploymentJson))
       }
     }
   }
