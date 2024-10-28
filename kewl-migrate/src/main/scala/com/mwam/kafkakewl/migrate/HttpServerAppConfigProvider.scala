@@ -27,6 +27,8 @@ trait HttpServerAppConfigProvider extends ExecutorContextFactory with HttpConfig
     .getOrElse(throw new RuntimeException("changelog-store.kafka-cluster must be specified"))
 
   val vnextInstances = kafkaKewlMigrateConfig.kafkaConfig("vnext.instances").map { case (k, v) => (KafkaClusterEntityId(k), v)}
+  val vnextConnectTimeoutMillis = kafkaKewlMigrateConfig.getIntOrNoneIfEmpty("vnext.connect-timeout-millis").getOrElse(30000)
+  val vnextReadTimeoutMillis = kafkaKewlMigrateConfig.getIntOrNoneIfEmpty("vnext.read-timeout-millis").getOrElse(120000)
 
   val destinationPath: Option[String] = kafkaKewlMigrateConfig.getStringOrNone("destination.path")
 }

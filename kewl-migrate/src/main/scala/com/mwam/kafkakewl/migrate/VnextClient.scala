@@ -17,14 +17,19 @@ private final case class TopologyDeploymentCompact(topologyId: String, status: J
 private final case class TopologyDeploymentStatus(result: Option[String] = None)
 private final case class DeploymentsSuccess(statuses: Map[String, TopologyDeploymentStatus])
 
-final case class VnextClient(kafkaClusterId: KafkaClusterEntityId, urlTemplate: String) extends LazyLogging {
+final case class VnextClient(
+  kafkaClusterId: KafkaClusterEntityId,
+  urlTemplate: String,
+  connectTimeoutMillis: Int,
+  readTimeoutMillis: Int
+) extends LazyLogging {
   private lazy val url = urlTemplate.replace("{kafkaCluster}", kafkaClusterId.id)
   private lazy val apiUrl = s"$url/api/v1"
   private lazy val deploymentsUrl = s"$apiUrl/deployments"
   private lazy val deploymentsCompactUrl = s"$apiUrl/deployments-compact"
 
   def getDeployedTopologyIds: Set[String] = {
-    val response = requests.get(deploymentsCompactUrl)
+    val response = requests.get(deploymentsCompactUrl, connectTimeout = connectTimeoutMillis, readTimeout = readTimeoutMillis)
     val responseText = response.text()
     if (response.is2xx) {
       val topologyDeploymentCompacts = decode[Seq[TopologyDeploymentCompact]](responseText).right.get
@@ -38,7 +43,13 @@ final case class VnextClient(kafkaClusterId: KafkaClusterEntityId, urlTemplate: 
     val deploymentJson = deployment.asJson
     saveJsonFunc(kafkaClusterId, deploymentJson)
     logger.info(s"Deploying ${deployment.deploy.size} topologies, deleting ${deployment.delete.size}...")
-    val response = requests.post(deploymentsUrl, data = deploymentJson.noSpaces, headers = ("Content-type", "application/json") :: Nil)
+    val response = requests.post(
+      deploymentsUrl,
+      data = deploymentJson.noSpaces,
+      headers = ("Content-type", "application/json") :: Nil,
+      connectTimeout = connectTimeoutMillis,
+      readTimeout = readTimeoutMillis
+    )
     val responseText = response.text()
     if (response.is2xx) {
       val deploymentsSuccess = decode[DeploymentsSuccess](responseText).right.get
