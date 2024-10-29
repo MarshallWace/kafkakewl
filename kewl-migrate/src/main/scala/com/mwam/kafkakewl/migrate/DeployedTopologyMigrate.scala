@@ -420,7 +420,7 @@ object DeployedTopologyMigrate {
     }
 
     private def logMigrationMessage(message: String): Unit = {
-      withMDC(Map("eventId" -> "migration")) {
+      withMDC(getCurrentMDC ++ Map("eventId" -> "migration")) {
         logger.warn(s"migrating ${deployedTopology.kafkaClusterId} / ${deployedTopology.topologyId} / v${deployedTopology.deploymentVersion}: $message")
       }
     }
