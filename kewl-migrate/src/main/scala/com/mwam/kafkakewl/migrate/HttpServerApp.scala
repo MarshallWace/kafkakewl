@@ -129,12 +129,12 @@ object HttpServerApp extends App
       .foreach { case (kafkaClusterId, urlTemplate) =>
         withMDC(mdc(kafkaClusterId)) {
           val vnextClient = VnextClient(kafkaClusterId, urlTemplate, vnextConnectTimeoutMillis, vnextReadTimeoutMillis)
-          val actualVnextTopologIds = vnextClient.getDeployedTopologyIds
+          val actualVnextTopologyIds = vnextClient.getDeployedTopologyIds
           val desiredVnextTopologies = desiredVnextTopologiesByKafkaCluster.getOrElse(kafkaClusterId, Map.empty)
           // We'll deploy all current migrated topologies (they may already be deployed to vnext, but that's fine, it's idempotent)
           val deploy = desiredVnextTopologies.values.toSeq
           // We'll delete all topologies that are in vnext but not in the desired set
-          val delete = (actualVnextTopologIds -- desiredVnextTopologies.keys).toSeq
+          val delete = (actualVnextTopologyIds -- desiredVnextTopologies.keys).toSeq
           val vnextDeployment = VnextDeployment(deploy = deploy, delete = delete)
           vnextClient.deploy(saveDeploymentJson)(vnextDeployment)
         }
