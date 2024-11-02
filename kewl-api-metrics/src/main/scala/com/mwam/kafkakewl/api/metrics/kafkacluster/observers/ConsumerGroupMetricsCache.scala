@@ -24,6 +24,15 @@ trait ConsumerGroupMetricsCache {
   }
 }
 
+final case class ConsumerGroupTopic(consumerGroupId: String, topic: String) {
+  override def toString: String = s"[$consumerGroupId/$topic}]"
+}
+
+object ConsumerGroupTopic {
+  def apply(consumerGroupTopicPartition: ConsumerGroupTopicPartition): ConsumerGroupTopic =
+    ConsumerGroupTopic(consumerGroupTopicPartition.consumerGroupId, consumerGroupTopicPartition.topicPartition.topic())
+}
+
 class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) extends ConsumerGroupMetricsCache
   with KafkaClusterObserver
   with ConsumerGroupMetricsObserver
@@ -32,6 +41,10 @@ class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) ext
   override lazy val metricBaseName = MetricName("com.mwam.kafkakewl.api.metrics.consumer")
 
   private val consumerGroupMetrics = concurrent.TrieMap.empty[KafkaClusterEntityId, concurrent.TrieMap[ConsumerGroupTopicPartition, ConsumerGroupMetrics]]
+  // These two below could in theory be just in nested TrieMaps, by KafkaClusterEntityId then by consumerGroupId then by topic, then by ConsumerGroupTopicPartition.
+  // However, the REST endpoints currently using consumerGroupMetricsByConsumerGroupAndTopic wouldn't be more performant (I tested) so I'm keeping these two indices
+  // holding the same set of data for the metrics gauges and the REST endpoints.
+  private val consumerGroupMetricsByConsumerGroupTopic = concurrent.TrieMap.empty[KafkaClusterEntityId, concurrent.TrieMap[ConsumerGroupTopic, concurrent.TrieMap[ConsumerGroupTopicPartition, ConsumerGroupMetrics]]]
   private val consumerGroupMetricsByConsumerGroupAndTopic = concurrent.TrieMap.empty[KafkaClusterEntityId, SortedMap[String, SortedMap[String, Map[ConsumerGroupTopicPartition, ConsumerGroupMetrics]]]]
 
   private def updateConsumerGroupMetricsByConsumerGroup(
@@ -71,18 +84,20 @@ class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) ext
       }
   }
 
-  private def getCurrentTopicConsumerGroupMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Map[ConsumerGroupTopicPartition, ConsumerGroupMetrics]] =
-    getConsumerGroupMetricsByConsumerGroupAndTopic(kafkaClusterId)
-      .flatMap(_.get(group))
-      .flatMap(_.get(topic))
+  private def getCurrentTopicConsumerGroupMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[concurrent.TrieMap[ConsumerGroupTopicPartition, ConsumerGroupMetrics]] =
+    for {
+      consumerGroupMetricsByConsumerGroupTopic <- consumerGroupMetricsByConsumerGroupTopic.get(kafkaClusterId)
+      consumerGroupTopicPartitionMetrics <- consumerGroupMetricsByConsumerGroupTopic.get(ConsumerGroupTopic(group, topic))
+    } yield consumerGroupTopicPartitionMetrics
 
-  private def getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Long] =
+  private def getCurrentTopicTotalLagForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Long] = {
     getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
       .map(_.values
         // the lag defaults to the high-offset, if that's missing, it's just zero
         .map { cgm => cgm.lag.orElse(cgm.partitionHigh.map(_.offset)).getOrElse(0L) }
         .sum
       )
+  }
 
   private def getCurrentTopicTotalConsumedForGaugeMetrics(kafkaClusterId: KafkaClusterEntityId, group: String, topic: String): Option[Double] =
     getCurrentTopicConsumerGroupMetrics(kafkaClusterId, group, topic)
@@ -141,6 +156,7 @@ class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) ext
 
   override def remove(kafkaClusterId: KafkaClusterEntityId): Unit = {
     consumerGroupMetrics.remove(kafkaClusterId)
+    consumerGroupMetricsByConsumerGroupTopic.remove(kafkaClusterId)
     invalidateConsumerGroupMetricsByConsumerGroupAndTopic(kafkaClusterId)
   }
 
@@ -153,14 +169,30 @@ class ConsumerGroupMetricsCacheImpl(consumerStatusExposedAsMetrics: Boolean) ext
       // as a result, need to update the other data-structure too
       updateConsumerGroupMetricsByConsumerGroup(kafkaClusterId, consumerGroupsMetrics)
     }
+
+    for {
+      // If anything does not exist in the nested TrieMaps below, we just simply don't remove it, because it's not there
+      consumerGroupMetricsByConsumerGroupTopic <- consumerGroupMetricsByConsumerGroupTopic.get(kafkaClusterId)
+      consumerGroupTopicPartitionMetrics <- consumerGroupMetricsByConsumerGroupTopic.get(ConsumerGroupTopic(consumerGroupTopicPartition))
+    } yield {
+      consumerGroupTopicPartitionMetrics.remove(consumerGroupTopicPartition)
+    }
   }
 
   override def updateConsumerGroupMetrics(kafkaClusterId: KafkaClusterEntityId, consumerGroupTopicPartition: ConsumerGroupTopicPartition, metrics: ConsumerGroupMetrics): Unit = {
-    val consumerGroupsMetrics = consumerGroupMetrics.getOrElseUpdate(kafkaClusterId, concurrent.TrieMap.empty[ConsumerGroupTopicPartition, ConsumerGroupMetrics])
+    val consumerGroupsMetrics = consumerGroupMetrics.getOrElseUpdate(kafkaClusterId, concurrent.TrieMap.empty)
     consumerGroupsMetrics.update(consumerGroupTopicPartition, metrics)
 
     // as a result, need to update the other data-structure too
     updateConsumerGroupMetricsByConsumerGroup(kafkaClusterId, consumerGroupsMetrics)
+
+    // updating the data-structures backing the gauge metrics - this should be safe even in case of concurrent updates:
+    // - getOrElseUpdate() will return the same for the different threads
+    // - for the same consumerGroupTopicPartition there is no concurrency so the final update is fine too
+    consumerGroupMetricsByConsumerGroupTopic
+      .getOrElseUpdate(kafkaClusterId, concurrent.TrieMap.empty)
+      .getOrElseUpdate(ConsumerGroupTopic(consumerGroupTopicPartition), concurrent.TrieMap.empty)
+      .update(consumerGroupTopicPartition, metrics)
 
     // publish it as metrics
     updateTopicAndPartitionMetrics(kafkaClusterId, consumerGroupTopicPartition)
