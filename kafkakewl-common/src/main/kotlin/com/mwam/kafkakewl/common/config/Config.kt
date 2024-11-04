@@ -9,6 +9,7 @@ package com.mwam.kafkakewl.common.config
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addFileSource
 import com.sksamuel.hoplite.addResourceSource
+import com.sksamuel.hoplite.sources.EnvironmentVariablesPropertySource
 
 data class HttpConfig(
     val host: String = "0.0.0.0",
@@ -37,10 +38,21 @@ data class KafkaClusterConfig(
     val client: KafkaClientConfig
 )
 
+
+fun ConfigLoaderBuilder.addEnvironmentSource(prefix: String? = null): ConfigLoaderBuilder {
+    return addPropertySource(
+        EnvironmentVariablesPropertySource(
+            useUnderscoresAsSeparator = true,
+            allowUppercaseNames = true,
+            { System.getenv().filter { prefix == null || it.key.startsWith(prefix) != false } },
+            prefix = prefix
+        )
+    )
+}
+
 inline fun <reified A : Any> loadConfig(overrideFileName: String, applicationConfigResource: String = "/application.yaml"): A {
     return ConfigLoaderBuilder.default()
-        // TODO this fails currently because there are weird env vars on my linux box
-        //.addEnvironmentSource(useUnderscoresAsSeparator = true)
+        .addEnvironmentSource(prefix = "KAFKAKEWL__")
         .addFileSource(overrideFileName)
         .addResourceSource(applicationConfigResource)
         .build()
