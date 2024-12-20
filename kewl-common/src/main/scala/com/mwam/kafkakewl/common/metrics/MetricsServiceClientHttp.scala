@@ -11,24 +11,25 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest}
 import akka.stream.Materializer
 import cats.data.EitherT
-import cats.syntax.either._
 import cats.instances.future._
-import io.circe.syntax._
-import com.mwam.kafkakewl.utils._
+import cats.syntax.either._
 import com.mwam.kafkakewl.common.http.HttpClientHelper
 import com.mwam.kafkakewl.common.topology.TopologyToDeployOperations
 import com.mwam.kafkakewl.domain.CommandError
 import com.mwam.kafkakewl.domain.kafka.KafkaTopic
 import com.mwam.kafkakewl.domain.kafkacluster.KafkaClusterEntityId
-import com.mwam.kafkakewl.domain.metrics.TopicPartitionsConsumerGroupMetrics
 import com.mwam.kafkakewl.domain.metrics.JsonEncodeDecode._
+import com.mwam.kafkakewl.domain.metrics.TopicPartitionsConsumerGroupMetrics
 import com.mwam.kafkakewl.domain.topology.TopologyLike.TopicDefaults
 import com.mwam.kafkakewl.domain.topology.{TopologyEntityId, TopologyToDeploy}
+import com.mwam.kafkakewl.utils._
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.syntax._
+import nl.grons.metrics4.scala.{DefaultInstrumented, MetricName}
 
 import scala.collection.SortedMap
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.Try
 
 class MetricsServiceClientHttp(
@@ -41,7 +42,10 @@ class MetricsServiceClientHttp(
 ) extends MetricsServiceClient
   with HttpClientHelper
   with LazyLogging
-  with TopologyToDeployOperations {
+  with TopologyToDeployOperations
+  with DefaultInstrumented {
+
+  override lazy val metricBaseName: MetricName = MetricName("com.mwam.kafkakewl.api.httpclientmetrics")
 
   private def getConsumedTopicNamesByConsumerGroup(
     currentTopologies: Map[TopologyEntityId, TopologyToDeploy],
@@ -79,15 +83,28 @@ class MetricsServiceClientHttp(
     try
       deployedTopologiesByKafkaClusterId.par.map { case (kid, deployedTopologies) =>
         val topicNames = deployedTopologies.flatMap(_.topics.values.map(_.name))
-        val request = HttpRequest(uri = s"$metricsServiceUri/$kid/topic", entity = HttpEntity(ContentTypes.`application/json`, topicNames.asJson.noSpaces))
+        val uri = s"$metricsServiceUri/$kid/topic"
+        val body = HttpEntity(ContentTypes.`application/json`, topicNames.asJson.noSpaces)
+        val request = HttpRequest(uri = uri, entity = body)
         val responseResult = for {
           stringResponse <- EitherT.right(toStringResponse(Http().singleRequest(request)))
           topicInfo <- EitherT.fromEither[Future](decodeResponse[SortedMap[String, Either[String, KafkaTopic.Info]]](stringResponse))
         } yield topicInfo
-        val topicInfos = Try(Await.result(responseResult.value, 20.seconds)).toEither.leftMap(CommandError.exception).flatMap(x => x) match {
-          case Left(e) => topicNames.map(t => (t, Left(e))).toSortedMap
-          case Right(r) => r.mapValues(_.leftMap(CommandError.otherError))
-        }
+        val topicInfos = Try(Await.result(responseResult.value, 20.seconds)).toEither
+          .leftMap { e =>
+            // The http request failed.
+            val errorType = e.getClass.getSimpleName
+            logger.warn(s"GET $uri failed with $errorType: ${e.getMessage}", e)
+            metrics.counter(s"$errorType:$kid:topic").inc()
+            CommandError.exception(e)
+          }
+          .flatMap { x =>
+            metrics.counter(s"Success:$kid:topic").inc()
+            x
+          } match {
+            case Left(e) => topicNames.map(t => (t, Left(e))).toSortedMap
+            case Right(r) => r.mapValues(_.leftMap(CommandError.otherError))
+          }
         (kid, topicInfos)
       }.seq
     finally logger.info(s"getTopicInfos() finished.")
@@ -109,24 +126,36 @@ class MetricsServiceClientHttp(
           val consumerGroupsWithConsumedTopicNames = getConsumedTopicNamesByConsumerGroup(currentTopologies.map(t => (t.topologyEntityId, t)).toMap, deployedTopologies)
           val consumerGroupIds = consumerGroupsWithConsumedTopicNames.keys
 
-          val request = HttpRequest(uri = s"$metricsServiceUri/$kid/group", entity = HttpEntity(ContentTypes.`application/json`, consumerGroupIds.asJson.noSpaces))
+          val uri = s"$metricsServiceUri/$kid/group"
+          val body = consumerGroupIds.asJson.noSpaces
+          val request = HttpRequest(uri = uri, entity = HttpEntity(ContentTypes.`application/json`, body))
           val responseResult = for {
             stringResponse <- EitherT.right(toStringResponse(Http().singleRequest(request)))
             consumerGroupMetrics <- EitherT.fromEither[Future](decodeResponse[SortedMap[String, Either[String, TopicPartitionsConsumerGroupMetrics]]](stringResponse))
           } yield consumerGroupMetrics
           val consumerGroupsMetrics = Try(Await.result(responseResult.value, 20.seconds)).toEither
-            .leftMap(CommandError.exception).flatMap(x => x) match {
-            case Left(e) => consumerGroupIds.map(cg => (cg, Left(e))).toSortedMap
-            case Right(r) => r.map { case (consumerGroup, topicPartitionsConsumerGroupMetrics) =>
-              (
-                consumerGroup,
-                topicPartitionsConsumerGroupMetrics
-                  .leftMap(CommandError.otherError)
-                  // filtering the resulting topic-partitions metrics for the topics that this consumer group is actually consumes (has a consume relationship to)
-                  .map(_.filter { case (topicName, _) => consumerGroupsWithConsumedTopicNames(consumerGroup)(topicName) })
-              )
+            .leftMap { e =>
+              // The http request failed.
+              val errorType = e.getClass.getSimpleName
+              logger.warn(s"GET $uri failed with $errorType: ${e.getMessage}", e)
+              metrics.counter(s"$errorType:$kid:group").inc();
+              CommandError.exception(e)
             }
-          }
+            .flatMap { x =>
+              metrics.counter(s"Success:$kid:group").inc()
+              x
+            } match {
+              case Left(e) => consumerGroupIds.map(cg => (cg, Left(e))).toSortedMap
+              case Right(r) => r.map { case (consumerGroup, topicPartitionsConsumerGroupMetrics) =>
+                (
+                  consumerGroup,
+                  topicPartitionsConsumerGroupMetrics
+                    .leftMap(CommandError.otherError)
+                    // filtering the resulting topic-partitions metrics for the topics that this consumer group is actually consumes (has a consume relationship to)
+                    .map(_.filter { case (topicName, _) => consumerGroupsWithConsumedTopicNames(consumerGroup)(topicName) })
+                )
+              }
+            }
           (kid, consumerGroupsMetrics)
       }.seq.toMap
     finally logger.info(s"getConsumerGroupMetrics() finished.")

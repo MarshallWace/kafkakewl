@@ -17,6 +17,15 @@ rules:
       metric: "$3"
       result: "$4"
       type: "$5"
+  - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.api\.httpclientmetrics\.(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-http-client-metrics"
+    value: "$5"
+    labels:
+      result: "$1"
+      kafkaCluster: "$2"
+      metricType: "$3"
+      type: "$4"
   - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.processor\.kafkacluster\.zk_get_deleted_topics_failed\:(.+)\"><>(.+): (.+)'
     type: UNTYPED
     name: "kafkakewl_zk_get_deleted_topics_failed"
