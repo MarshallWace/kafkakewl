@@ -106,7 +106,7 @@ docker build -t kafkakewl-api -f kafkakewl-api.dockerfile .
 **kafkakewl-api-metrics**:
 
 ```bash
-docker build -t kafkakewl-api -f kafkakewl-api-metrics.dockerfile .
+docker build -t kafkakewl-api-metrics -f kafkakewl-api-metrics.dockerfile .
 ```
 
 # **kafkakewl-api** Configuration
