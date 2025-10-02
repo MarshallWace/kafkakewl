@@ -9,7 +9,7 @@ package com.mwam.kafkakewl.common.plugins
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.mwam.kafkakewl.common.metrics.metricsName
-import io.github.smiley4.ktorswaggerui.dsl.*
+import io.github.smiley4.ktoropenapi.*
 import io.ktor.http.*
 import io.ktor.serialization.JsonConvertException
 import io.ktor.serialization.kotlinx.json.json
@@ -77,6 +77,7 @@ fun Application.configureMonitoring() {
         registry = meterRegistry
         // ...
     }
+
     routing {
         get("/metrics", {
             hidden = true

@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:$kotlin_version")
 
     constraints {
         // Define dependency versions as constraints
@@ -38,7 +38,6 @@ dependencies {
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter:$junit_jupyter_version")
-
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

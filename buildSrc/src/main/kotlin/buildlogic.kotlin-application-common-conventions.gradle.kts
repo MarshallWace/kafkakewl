@@ -4,6 +4,7 @@
  */
 
 val ktor_version: String by project
+val ktor_openapi_version: String by project
 val logback_version: String by project
 val prometheus_version: String by project
 val koin_version: String by project
@@ -22,7 +23,8 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jwt-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-webjars-jvm:$ktor_version")
     implementation("org.webjars:jquery:3.2.1")
-    implementation("io.github.smiley4:ktor-swagger-ui:2.9.0")
+    implementation("io.github.smiley4:ktor-openapi:${ktor_openapi_version}")
+    implementation("io.github.smiley4:ktor-swagger-ui:$ktor_openapi_version")
     implementation("io.ktor:ktor-server-compression-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-cors-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-metrics-micrometer-jvm:$ktor_version")

@@ -11,10 +11,10 @@ import com.mwam.kafkakewl.common.plugins.receiveWithDeserializationError
 import com.mwam.kafkakewl.deploy.services.*
 import com.mwam.kafkakewl.domain.*
 import io.github.oshai.kotlinlogging.withLoggingContext
-import io.github.smiley4.ktorswaggerui.SwaggerUI
-import io.github.smiley4.ktorswaggerui.dsl.*
+import io.github.smiley4.ktoropenapi.*
+import io.github.smiley4.ktoropenapi.config.RequestConfig
+import io.github.smiley4.ktorswaggerui.swaggerUI
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.request.*
@@ -33,7 +33,7 @@ fun ApplicationRequest.extractTopologyDeploymentQuery(): TopologyDeploymentQuery
 }
 
 /** describes the filter/offset/limit query parameters for an OpenApi request */
-fun OpenApiRequest.queryParametersForTopologyDeploymentQuery() {
+fun RequestConfig.queryParametersForTopologyDeploymentQuery() {
     queryParameter<String?>("filter") {
         description = "An optional regular expression filter for the topology id"
     }
@@ -49,23 +49,17 @@ fun Application.configureRouting() {
     install(Webjars) {
         path = "/webjars" //defaults to /webjars
     }
-    install(SwaggerUI) {
-        swagger {
-            swaggerUrl = "swagger-ui"
-            forwardRoot = true
-        }
-        info {
-            title = "kafkakewl API"
-            version = "latest"
-            description = "kafkakewl API"
-        }
-        server {
-            // TODO the service url and description for swagger should come from config
-            url = "http://localhost:8080"
-            description = "Development Server"
-        }
-    }
+    install(OpenApi)
+
     routing {
+        route("api.json") {
+            openApi()
+        }
+        route("swagger") {
+            swaggerUI("/api.json") {
+            }
+        }
+
         val topologyDeploymentsService by inject<TopologyDeploymentsService>()
 
         route("/api/v1") {
