@@ -5,7 +5,11 @@
 
 val kotlin_version: String by project
 val kotlinx_coroutines_version: String by project
+val kotlinx_serialization_json_version: String by project
+val kotlinx_datetime_version: String by project
 val kotlin_logging_version: String by project
+val junit_jupyter_version: String by project
+val arrow_version: String by project
 
 plugins {
     // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
@@ -25,16 +29,15 @@ dependencies {
         implementation("org.apache.commons:commons-text:1.12.0")
     }
 
-    implementation("io.arrow-kt:arrow-core:1.2.4")
-    implementation("io.arrow-kt:arrow-fx-coroutines:1.2.4")
+    implementation("io.arrow-kt:arrow-core:$arrow_version")
+    implementation("io.arrow-kt:arrow-fx-coroutines:$arrow_version")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:$kotlinx_coroutines_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinx_serialization_json_version")
     implementation("io.github.oshai:kotlin-logging-jvm:$kotlin_logging_version")
 
     // Use JUnit Jupiter for testing.
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junit_jupyter_version")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

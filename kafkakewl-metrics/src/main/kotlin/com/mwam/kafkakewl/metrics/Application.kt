@@ -36,11 +36,11 @@ fun Application.module(config: Config) {
     val kafkaTopicInfoSource by inject<KafkaTopicInfoSource>()
     kafkaTopicInfoSource.startPublishing()
 
-    environment.monitor.subscribe(ApplicationStopped) { application ->
+    monitor.subscribe(ApplicationStopped) { application ->
         application.environment.log.info("Ktor server has stopped")
         // TODO can this be done in a better way?
         kafkaTopicInfoSource.close()
-        application.environment.monitor.unsubscribe(ApplicationStopped) {}
+        application.monitor.unsubscribe(ApplicationStopped) {}
     }
 
     configureRouting()
