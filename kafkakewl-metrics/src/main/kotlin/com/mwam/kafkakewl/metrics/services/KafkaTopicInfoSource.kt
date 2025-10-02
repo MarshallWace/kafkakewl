@@ -20,11 +20,12 @@ import com.mwam.kafkakewl.utils.toEither
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.datetime.Clock
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.BytesDeserializer
 import org.apache.kafka.common.utils.Bytes
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import kotlin.time.measureTimedValue
 import kotlin.time.toJavaDuration
 

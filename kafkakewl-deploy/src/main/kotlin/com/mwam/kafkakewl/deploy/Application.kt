@@ -30,11 +30,11 @@ fun Application.module(config: Config) {
     configureMonitoring()
     configureCoreMetrics(config.kafkaCluster.name)
 
-    environment.monitor.subscribe(ApplicationStopped) { application ->
+    monitor.subscribe(ApplicationStopped) { application ->
         application.environment.log.info("Ktor server has stopped")
         // TODO can this be done in a better way?
         // TODO this is where we can close AutoCloseable services or do any kind of clean-up tasks
-        application.environment.monitor.unsubscribe(ApplicationStopped) {}
+        application.monitor.unsubscribe(ApplicationStopped) {}
     }
 
     configureRouting()

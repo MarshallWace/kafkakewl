@@ -12,7 +12,6 @@ pluginManagement {
     val spotless_version: String by settings
     plugins {
         id("io.ktor.plugin") version ktor_version
-        id("io.ktor.plugin") version ktor_version
         id("org.jetbrains.kotlin.plugin.serialization") version plugin_serialization_version
         id("com.diffplug.spotless") version spotless_version
     }

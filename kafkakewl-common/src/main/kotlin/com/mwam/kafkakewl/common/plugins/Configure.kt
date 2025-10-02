@@ -9,7 +9,7 @@ package com.mwam.kafkakewl.common.plugins
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.mwam.kafkakewl.common.metrics.metricsName
-import io.github.smiley4.ktorswaggerui.dsl.*
+import io.github.smiley4.ktoropenapi.*
 import io.ktor.http.*
 import io.ktor.serialization.JsonConvertException
 import io.ktor.serialization.kotlinx.json.json
@@ -18,8 +18,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.metrics.micrometer.*
 import io.ktor.server.plugins.BadRequestException
-import io.ktor.server.plugins.callloging.CallLogging
-import io.ktor.server.plugins.callloging.processingTimeMillis
+import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.calllogging.processingTimeMillis
 import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
@@ -32,7 +32,8 @@ import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
-import io.micrometer.prometheus.*
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.micrometer.prometheusmetrics.PrometheusConfig
 import kotlinx.serialization.json.Json
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -76,6 +77,7 @@ fun Application.configureMonitoring() {
         registry = meterRegistry
         // ...
     }
+
     routing {
         get("/metrics", {
             hidden = true

@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 interface TopologyDeploymentsService {
     suspend fun deploy(deployments: Deployments): Either<PostDeploymentsFailure, DeploymentsSuccess>
-    fun getTopologyDeployments(topologyDeploymentQuery: TopologyDeploymentQuery): List<TopologyDeployment>
+    fun getTopologyDeployments(query: TopologyDeploymentQuery): List<TopologyDeployment>
     fun getTopologyDeployment(id: TopologyId): TopologyDeployment?
 }
 

@@ -10,10 +10,9 @@ import com.mwam.kafkakewl.domain.*
 import com.mwam.kafkakewl.metrics.domain.*
 import com.mwam.kafkakewl.metrics.services.*
 import io.github.oshai.kotlinlogging.withLoggingContext
-import io.github.smiley4.ktorswaggerui.SwaggerUI
-import io.github.smiley4.ktorswaggerui.dsl.*
+import io.github.smiley4.ktoropenapi.*
+import io.github.smiley4.ktorswaggerui.swaggerUI
 import io.ktor.http.*
-import io.ktor.server.application.*
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.response.*
@@ -26,23 +25,17 @@ fun Application.configureRouting() {
     install(Webjars) {
         path = "/webjars" //defaults to /webjars
     }
-    install(SwaggerUI) {
-        swagger {
-            swaggerUrl = "swagger-ui"
-            forwardRoot = true
-        }
-        info {
-            title = "kafkakewl metrics API"
-            version = "latest"
-            description = "kafkakewl metrics API"
-        }
-        server {
-            // TODO the service url and description for swagger should come from config
-            url = "http://localhost:8080"
-            description = "Development Server"
-        }
-    }
+    install(OpenApi)
+
     routing {
+        route("api.json") {
+            openApi()
+        }
+        route("swagger") {
+            swaggerUI("/api.json") {
+            }
+        }
+
         val kafkaTopicInfoCache by inject<KafkaTopicInfoCache>()
         route("/api/v1") {
             get("/topic/{topic}", {

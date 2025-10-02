@@ -2,6 +2,8 @@
  *
  */
 
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id("com.diffplug.spotless")
     kotlin("plugin.serialization")
@@ -14,16 +16,22 @@ subprojects {
     spotless {
         kotlin {
             trimTrailingWhitespace()
-            indentWithSpaces()
+            leadingTabsToSpaces()
             endWithNewline()
             licenseHeaderFile(rootProject.file("license-header.kt"))
         }
         kotlinGradle {
             target("*.gradle.kts")
             trimTrailingWhitespace()
-            indentWithSpaces()
+            leadingTabsToSpaces()
             endWithNewline()
             licenseHeaderFile(rootProject.file("license-header.kt"), "/\\* do not remove or change")
+        }
+    }
+
+    tasks.withType<KotlinCompile>().configureEach {
+        compilerOptions {
+            freeCompilerArgs.add("-opt-in=kotlin.time.ExperimentalTime")
         }
     }
 }

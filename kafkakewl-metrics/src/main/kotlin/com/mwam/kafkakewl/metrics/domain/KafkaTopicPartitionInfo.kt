@@ -8,7 +8,7 @@ package com.mwam.kafkakewl.metrics.domain
 
 import kotlinx.serialization.Serializable
 import org.apache.kafka.common.TopicPartition
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 @Serializable
 data class KafkaTopicPartition(val topic: String, val partition: Int) {
