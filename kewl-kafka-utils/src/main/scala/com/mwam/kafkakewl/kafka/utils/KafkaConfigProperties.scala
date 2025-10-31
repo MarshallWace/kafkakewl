@@ -11,6 +11,7 @@ import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.security.auth.SecurityProtocol
 
 object KafkaConfigProperties {
   private def addConfigToProperties(config: Map[String, String], props: Properties): Properties = {
@@ -29,7 +30,14 @@ object KafkaConfigProperties {
 
     val props = new Properties()
     props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, config.connection.info.brokers)
-    config.connection.info.securityProtocol.foreach { securityProtocol => props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol) }
+    config.connection.info.securityProtocol.foreach { securityProtocol =>
+      props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol)
+      if (securityProtocol == SecurityProtocol.SASL_PLAINTEXT.name) {
+        if (!config.connection.info.config.contains(SaslConfigs.SASL_KERBEROS_KINIT_CMD)) {
+          props.put(SaslConfigs.SASL_KERBEROS_KINIT_CMD, "true")
+        }
+      }
+    }
     config.connection.jaasConfig.foreach { jaasConfig =>
       props.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig)
     }
@@ -43,7 +51,14 @@ object KafkaConfigProperties {
   def forAdmin(config: KafkaAdminConfig): Properties = {
     val props = new Properties()
     props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, config.connection.info.brokers)
-    config.connection.info.securityProtocol.foreach { securityProtocol => props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol) }
+    config.connection.info.securityProtocol.foreach { securityProtocol =>
+      props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol)
+      if (securityProtocol == SecurityProtocol.SASL_PLAINTEXT.name) {
+        if (!config.connection.info.config.contains(SaslConfigs.SASL_KERBEROS_KINIT_CMD)) {
+          props.put(SaslConfigs.SASL_KERBEROS_KINIT_CMD, "true")
+        }
+      }
+    }
     config.connection.jaasConfig.foreach { jaasConfig =>
       props.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig)
     }
@@ -56,7 +71,14 @@ object KafkaConfigProperties {
   def forConsumer(config: KafkaConsumerConfig, keyDeserializer: String, valueDeserializer: String): Properties = {
     val props = new Properties()
     props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, config.connection.info.brokers)
-    config.connection.info.securityProtocol.foreach { securityProtocol => props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol) }
+    config.connection.info.securityProtocol.foreach { securityProtocol =>
+      props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, securityProtocol)
+      if (securityProtocol == SecurityProtocol.SASL_PLAINTEXT.name) {
+        if (!config.connection.info.config.contains(SaslConfigs.SASL_KERBEROS_KINIT_CMD)) {
+          props.put(SaslConfigs.SASL_KERBEROS_KINIT_CMD, "true")
+        }
+      }
+    }
     config.connection.jaasConfig.foreach { jaasConfig =>
       props.put(SaslConfigs.SASL_JAAS_CONFIG, jaasConfig)
     }
