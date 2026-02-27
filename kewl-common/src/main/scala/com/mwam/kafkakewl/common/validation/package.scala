@@ -46,11 +46,12 @@ package object validation {
   def validateStateStore(
     logger: Logger,
     inMemoryStateStores: AllStateEntities.InMemoryVersionedStateStores,
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Unit = {
     val currentTopologies = inMemoryStateStores.topology.getLatestLiveStates.map(s => (TopologyEntityId(s.id), s.entity)).toMap
     val (validationResult, validationDuration) = durationOf {
-      TopologiesValidator.validateAllTopologies(currentTopologies, topicDefaults)
+      TopologiesValidator.validateAllTopologies(currentTopologies, topicDefaults, validatorConfig)
     }
 
     logValidationErrorsAndFailFast(logger, validationDuration, validationResult)
@@ -72,7 +73,8 @@ package object validation {
     logger: Logger,
     inMemoryStateStores: AllDeploymentEntities.InMemoryStateStores,
     kafkaCluster: KafkaCluster,
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Unit = {
     val currentDeployedTopologies = inMemoryStateStores.deployedTopology.getLatestLiveStates.map(dp => (dp.entity.topologyId, dp)).toMap
     val currentTopologies = currentDeployedTopologies
@@ -80,7 +82,7 @@ package object validation {
       .collect { case (p, Some(pv)) => (p, pv.topology) }
 
     val (validationResult, validationDuration) = durationOf {
-      TopologiesToDeployValidator.validateAllTopologies(currentTopologies, kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults)
+      TopologiesToDeployValidator.validateAllTopologies(currentTopologies, kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, validatorConfig)
     }
 
     logValidationErrorsAndFailFast(logger, validationDuration, validationResult)

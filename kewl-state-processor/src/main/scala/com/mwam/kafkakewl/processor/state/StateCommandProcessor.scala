@@ -15,7 +15,7 @@ import com.mwam.kafkakewl.common._
 import com.mwam.kafkakewl.common.cache.{AllStateEntitiesStateStoresCache, DeployedTopologyStateStoresCache}
 import com.mwam.kafkakewl.common.metrics.MetricsServiceOps
 import com.mwam.kafkakewl.common.persistence.PersistentStoreFactory
-import com.mwam.kafkakewl.common.validation.{PermissionValidator, validateStateStore}
+import com.mwam.kafkakewl.common.validation.{PermissionValidator, TopologyValidatorConfig, validateStateStore}
 import com.mwam.kafkakewl.domain.AllStateEntitiesStateChanges._
 import com.mwam.kafkakewl.domain.deploy.DeployedTopology
 import com.mwam.kafkakewl.domain.kafkacluster.KafkaClusterEntityId
@@ -31,7 +31,8 @@ object StateCommandProcessor {
     env: Env,
     kafkaClusterCommandProcessorJaasConfig: Option[String], // the only purpose of this here is validation
     metricsService: Option[MetricsServiceOps],
-    failFastIfStateStoreInvalid: Boolean
+    failFastIfStateStoreInvalid: Boolean,
+    topologyValidatorConfig: TopologyValidatorConfig
   )
 
   final case class Result(
@@ -64,7 +65,7 @@ class StateCommandProcessor(
   val topicDefaults: TopicDefaults
 )(implicit system: ActorSystem, ec: ExecutionContextExecutor, mat: Materializer) extends LazyLogging with StateCommandProcessorCommon with PermissionCommandResultCommon {
 
-  private val validateCommandFunc: ValidatorFunc = StateCommandProcessingValidator.validateCommand(config.kafkaClusterCommandProcessorJaasConfig, topicDefaults)
+  private val validateCommandFunc: ValidatorFunc = StateCommandProcessingValidator.validateCommand(config.kafkaClusterCommandProcessorJaasConfig, topicDefaults, config.topologyValidatorConfig)
   private val persistentStore: AllStateEntitiesPersistentStore =
     persistentStoreFactory.createForStateEntities(logger, startWithWipe)
   private val inMemoryStateStores: AllStateEntities.InMemoryVersionedStateStores = {
@@ -75,7 +76,7 @@ class StateCommandProcessor(
     logger.info(s"loaded ${inMemoryStateStores.deployment.getLatestLiveStates.size} deployments")
 
     if (config.failFastIfStateStoreInvalid) {
-      validateStateStore(logger, inMemoryStateStores, topicDefaults)
+      validateStateStore(logger, inMemoryStateStores, topicDefaults, config.topologyValidatorConfig)
     } else {
       logger.info("skipping validating the state store")
     }

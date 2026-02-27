@@ -61,8 +61,8 @@ object HttpServerApp extends App
     ) with MetricsServiceOps
   }
 
-  private val stateCommandProcessorConfig = StateCommandProcessor.Config(env, kafkaClusterCommandProcessorJaasConfig, metricsService, failFastIfStateStoreInvalid)
-  private val kafkaClusterCommandProcessorConfig = CommandProcessorActor.KafkaClusterCommandProcessorConfig(env, kafkaClusterCommandProcessorJaasConfig, failFastIfDeploymentStateStoreInvalid)
+  private val stateCommandProcessorConfig = StateCommandProcessor.Config(env, kafkaClusterCommandProcessorJaasConfig, metricsService, failFastIfStateStoreInvalid, topologyValidatorConfig)
+  private val kafkaClusterCommandProcessorConfig = CommandProcessorActor.KafkaClusterCommandProcessorConfig(env, kafkaClusterCommandProcessorJaasConfig, failFastIfDeploymentStateStoreInvalid, topologyValidatorConfig)
 
   private val changeLogStoreOrNone = kafkaChangeLogStoreConnectionOrNone.map(new KafkaChangeLogStore(env, _, kafkaChangeLogStoreTopicConfig, timeout.duration))
 
@@ -86,6 +86,8 @@ object HttpServerApp extends App
   logger.info(s"persistent-store-config:  $persistentStoreConfig (${if (persistentStore == "sql") sqlDbConnectionInfoOrNone else "-"})")
   logger.info(s"kafka jaas config:        $kafkaClusterCommandProcessorJaasConfig")
   logger.info(s"metrics service:          ${metricsServiceUri.getOrElse("-")}")
+  logger.info(s"disallowed dev regex:     ${topologyValidatorConfig.disallowedDeveloperNameRegex.getOrElse("-")}")
+  logger.info(s"disallowed app user regex: ${topologyValidatorConfig.disallowedApplicationUserNameRegex.getOrElse("-")}")
   logger.info(s"http hosting port:        $httpPort")
   if (httpAllowedOrigins.nonEmpty) {
     for (httpAllowedOrigin <- httpAllowedOrigins) {

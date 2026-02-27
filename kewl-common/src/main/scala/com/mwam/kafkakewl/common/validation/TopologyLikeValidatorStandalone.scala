@@ -63,7 +63,31 @@ class TopologyLikeValidatorStandalone[NodeType, TopicType <: TopologyLike.Topic 
     ).combine()
   }
 
-  def validateStandaloneTopology(topologyId: TopologyEntityId, topology: TopologyType): Validation.Result = {
+  def validateDisallowedApplicationUserNames(userNames: Iterable[String], disallowedRegex: Option[String]): Validation.Result =
+    disallowedRegex match {
+      case Some(regex) =>
+        val pattern = regex.r
+        val disallowed = userNames.filter(u => pattern.findFirstIn(u).isDefined).toSeq
+        Validation.Result.validationErrorIf(
+          disallowed.nonEmpty,
+          s"application user names ${disallowed.map(_.quote).mkString(", ")} are disallowed (matching regex '$regex')"
+        )
+      case None => Validation.Result.success
+    }
+
+  def validateDisallowedDeveloperNames(developers: Seq[String], disallowedRegex: Option[String]): Validation.Result =
+    disallowedRegex match {
+      case Some(regex) =>
+        val pattern = regex.r
+        val disallowed = developers.filter(d => pattern.findFirstIn(d).isDefined)
+        Validation.Result.validationErrorIf(
+          disallowed.nonEmpty,
+          s"developer names ${disallowed.map(_.quote).mkString(", ")} are disallowed (matching regex '$regex')"
+        )
+      case None => Validation.Result.success
+    }
+
+  def validateStandaloneTopology(topologyId: TopologyEntityId, topology: TopologyType, validatorConfig: TopologyValidatorConfig): Validation.Result = {
     def isPartOfNamespace(name: String): Boolean = topology.namespace.contains(name)
 
     val namespace = topology.namespace
@@ -123,7 +147,8 @@ class TopologyLikeValidatorStandalone[NodeType, TopicType <: TopologyLike.Topic 
       //      Validation.Result.validationErrorIf(duplicateGroups.nonEmpty, s"duplicate consumer groups: ${duplicateGroups.map(_.quote).mkString(", ")}"),
       //      Validation.Result.validationErrorIf(duplicateTransactionalIds.nonEmpty, s"duplicate transactional ids: ${duplicateTransactionalIds.map(_.quote).mkString(", ")}"),
       topology.fullyQualifiedTopics.values.map(validateTopologyTopic).combine(),
-      topology.fullyQualifiedApplications.values.map(validateTopologyApplication).combine()
+      topology.fullyQualifiedApplications.values.map(validateTopologyApplication).combine(),
+      validateDisallowedDeveloperNames(topology.developers, validatorConfig.disallowedDeveloperNameRegex)
     ).combine()
   }
 }

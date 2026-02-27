@@ -35,7 +35,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -54,7 +54,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced topic 'shared-topic.topic-to-consume' cannot be consumed by applications in 'test' namespace")
       }
@@ -74,7 +74,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("test"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("test"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -93,7 +93,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced topic 'shared-topic.topic-to-consume' cannot be consumed by applications in 'shared-application' namespace")
       }
@@ -113,7 +113,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("shared-application"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("shared-application"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -132,7 +132,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessages(
           "relationship's referenced topic 'shared-topic.topic-to-consume' cannot be consumed by applications in 'shared-application' namespace",
@@ -154,7 +154,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             )
           )
 
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("test", "shared-application"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults.withConsumerNamespace("test", "shared-application"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -165,7 +165,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumableTopic()).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -174,7 +174,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedConsumableTopic("shared-other")).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.topic-to-consume' for relationship")
       }
@@ -184,7 +184,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(Topology(Namespace("shared"))).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.topic-to-consume' for relationship")
       }
@@ -194,7 +194,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedConsumableTopic() ~+ (LocalTopicId("topic-to-consume") --> Topology.Topic("shared.topic-to-consume"))).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessages("relationship's referenced topic 'shared.topic-to-consume' cannot be consumed by applications in 'test' namespace")
       }
@@ -204,7 +204,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumableTopic() ~+ (LocalTopicId("topic-to-consume") --> Topology.Topic("shared.topic-to-consume"))).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withConsumerNamespace("test"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withConsumerNamespace("test"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -219,7 +219,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             .withoutRelationshipOf(NodeRef("test.sink"))
             .withRelationship(relationshipFrom("test.sink", (RelationshipType.Consume(), Seq((s"shared-topics", None)))))
         )
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessages("cannot be consumed by applications in 'test' namespace")
       }
@@ -231,7 +231,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologySharedConsumableTopic() ~+ (LocalTopicId("topic-to-consume") --> Topology.Topic("shared.topic-to-consume", otherConsumerNamespaces = Seq(FlexibleName.Exact("test.some-other-namespace"))))
         ).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessages("cannot be consumed by applications in 'test' namespace")
       }
@@ -243,7 +243,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologySharedConsumableTopic() ~+ (LocalTopicId("topic-to-consume") --> Topology.Topic("shared.topic-to-consume", otherConsumerNamespaces = Seq(FlexibleName.Exact("test.some-other-namespace"))))
         ).toMapByTopologyId
         val newTopology = Some(topologyConsumingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withConsumerNamespace("test"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withConsumerNamespace("test"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -264,7 +264,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             relationshipFrom("processor", (RelationshipType.Consume(), Seq(("shared-topics", None))))
           )
         )
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared.other"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared.other"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -280,7 +280,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             relationshipFrom("processor", (RelationshipType.Consume(), Seq(("shared-local-topics", None))))
           )
         )
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -296,7 +296,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             relationshipFrom("processor", (RelationshipType.Consume(), Seq(("shared-local-topics", None))))
           )
         )
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.topic-to-consume-x' for alias 'shared-local-topics'")
       }
@@ -315,7 +315,7 @@ class TopologyValidatorDependentSpec extends WordSpec
             relationshipFrom("processor", (RelationshipType.Consume(), Seq(("shared-local-topics", None))))
           )
         )
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced topic 'shared.topic-to-consume' cannot be consumed by applications in 'test' namespace")
       }
@@ -327,7 +327,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedProducableTopic()).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -336,7 +336,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedProducableTopic("shared-other")).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.topic-to-produce' for relationship")
       }
@@ -346,7 +346,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(Topology(Namespace("shared"))).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.topic-to-produce' for relationship")
       }
@@ -356,7 +356,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedProducableTopic() ~+ (LocalTopicId("topic-to-produce") --> Topology.Topic("shared.topic-to-produce"))).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced topic 'shared.topic-to-produce' cannot be produced by applications in 'test' namespace")
       }
@@ -366,7 +366,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedProducableTopic() ~+ (LocalTopicId("topic-to-produce") --> Topology.Topic("shared.topic-to-produce"))).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withProducerNamespace("test"))
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults.withProducerNamespace("test"), TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -377,7 +377,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologySharedProducableTopic() ~+ (LocalTopicId("topic-to-produce") --> Topology.Topic("shared.topic-to-produce", otherProducerNamespaces = Seq(FlexibleName.Exact("test.some-other-namespace"))))
         ).toMapByTopologyId
         val newTopology = Some(topologyProducingSharedTopic())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced topic 'shared.topic-to-produce' cannot be produced by applications in 'test' namespace")
       }
@@ -389,7 +389,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumingApplication()).toMapByTopologyId
         val newTopology = Some(topologyWithTopicConsumedBySharedConsumingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -398,7 +398,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedConsumingApplication("shared-other")).toMapByTopologyId
         val newTopology = Some(topologyWithTopicConsumedBySharedConsumingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.consuming-sink' for relationship")
       }
@@ -408,7 +408,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(Topology(Namespace("shared"))).toMapByTopologyId
         val newTopology = Some(topologyWithTopicConsumedBySharedConsumingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.consuming-sink' for relationship")
       }
@@ -418,7 +418,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedConsumingApplication() ~+ (LocalApplicationId("consuming-sink") --> Topology.Application("service-shared"))).toMapByTopologyId
         val newTopology = Some(topologyWithTopicConsumedBySharedConsumingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced application 'shared.consuming-sink' cannot consume topics in 'test' namespace")
       }
@@ -429,7 +429,7 @@ class TopologyValidatorDependentSpec extends WordSpec
         val sharedApplication = LocalApplicationId("consuming-sink") --> Topology.Application("service-shared", otherConsumableNamespaces = Seq(FlexibleName.Exact("test.some-other-app"))).makeSimple(Some("shared.consuming-sink"))
         val currentTopologies = Seq(topologySharedConsumingApplication() ~+ sharedApplication).toMapByTopologyId
         val newTopology = Some(topologyWithTopicConsumedBySharedConsumingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced application 'shared.consuming-sink' cannot consume topics in 'test' namespace")
       }
@@ -441,7 +441,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedProducingApplication()).toMapByTopologyId
         val newTopology = Some(topologyWithTopicProducedBySharedProducingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -450,7 +450,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedProducingApplication("shared-other")).toMapByTopologyId
         val newTopology = Some(topologyWithTopicProducedBySharedProducingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.producing-source' for relationship")
       }
@@ -460,7 +460,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(Topology(Namespace("shared"))).toMapByTopologyId
         val newTopology = Some(topologyWithTopicProducedBySharedProducingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("could not find 'shared.producing-source' for relationship")
       }
@@ -470,7 +470,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be invalid" in {
         val currentTopologies = Seq(topologySharedProducingApplication() ~+ (LocalApplicationId("producing-source") --> Topology.Application("service-shared"))).toMapByTopologyId
         val newTopology = Some(topologyWithTopicProducedBySharedProducingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced application 'shared.producing-source' cannot produce topics in 'test' namespace")
       }
@@ -482,7 +482,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologySharedProducingApplication() ~+ (LocalApplicationId("producing-source") --> Topology.Application("service-shared", otherConsumableNamespaces = Seq(FlexibleName.Exact("test.some-other-app"))))
         ).toMapByTopologyId
         val newTopology = Some(topologyWithTopicProducedBySharedProducingApplication())
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("test"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("relationship's referenced application 'shared.producing-source' cannot produce topics in 'test' namespace")
       }
@@ -494,7 +494,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumableTopic()).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -506,7 +506,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyConsumingSharedTopic().withoutRelationshipOf(NodeRef("test.sink"))
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.topic-to-consume'")
       }
@@ -519,7 +519,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyConsumingSharedTopic()
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.topic-to-consume'")
       }
@@ -531,7 +531,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedProducableTopic()).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -543,7 +543,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyProducingSharedTopic().withoutRelationshipOf(NodeRef("test.source"))
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.topic-to-produce'")
       }
@@ -556,7 +556,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyProducingSharedTopic()
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.topic-to-produce'")
       }
@@ -568,7 +568,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumingApplication()).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -580,7 +580,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyWithTopicConsumedBySharedConsumingApplication()
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.consuming-sink'")
       }
@@ -591,7 +591,7 @@ class TopologyValidatorDependentSpec extends WordSpec
     "there are no topologies referencing it" should {
       "be valid" in {
         val currentTopologies = Seq(topologySharedConsumingApplication()).toMapByTopologyId
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), None, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), None, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -602,7 +602,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologySharedConsumingApplication(),
           topologyWithTopicConsumedBySharedConsumingApplication()
         ).toMapByTopologyId
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), None, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), None, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.consuming-sink'")
       }
@@ -614,7 +614,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val currentTopologies = Seq(topologySharedProducingApplication()).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beValid
       }
     }
@@ -626,7 +626,7 @@ class TopologyValidatorDependentSpec extends WordSpec
           topologyWithTopicProducedBySharedProducingApplication()
         ).toMapByTopologyId
         val newTopology = Some(Topology(Namespace("shared")))
-        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(currentTopologies, TopologyEntityId("shared"), newTopology, topicDefaults, TopologyValidatorConfig.default)
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("topology 'test' depends on topology 'shared': 'shared.producing-source'")
       }
@@ -638,7 +638,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val topology = topologySourceSink()
         val otherTopology = topology.copy(topology = TopologyId("other"))
-        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults, TopologyValidatorConfig.default)
         // it should be valid, because without deploying topologies, they can have identical topics, etc...
         actualValidationResult should beValid
       }
@@ -650,7 +650,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val topology = topologyKafkaStreams()
         val otherTopology = topology.copy(topology = TopologyId("other"))
-        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults, TopologyValidatorConfig.default)
         // it should be valid, because without deploying topologies, they can have identical topics, etc...
         actualValidationResult should beValid
       }
@@ -662,7 +662,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val topology = topologyConnector()
         val otherTopology = topology.copy(topology = TopologyId("other"))
-        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults, TopologyValidatorConfig.default)
         // it should be valid, because without deploying topologies, they can have identical topics, etc...
         actualValidationResult should beValid
       }
@@ -674,7 +674,7 @@ class TopologyValidatorDependentSpec extends WordSpec
       "be valid" in {
         val topology = topologyConnectReplicator()
         val otherTopology = topology.copy(topology = TopologyId("other"))
-        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults)
+        val actualValidationResult = TopologyValidator.validateTopology(Seq(otherTopology).toMapByTopologyId, TopologyEntityId("test"), Some(topology), topicDefaults, TopologyValidatorConfig.default)
         // it should be valid, because without deploying topologies, they can have identical topics, etc...
         actualValidationResult should beValid
       }

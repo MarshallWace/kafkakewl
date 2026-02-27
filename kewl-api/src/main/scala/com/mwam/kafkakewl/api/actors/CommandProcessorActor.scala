@@ -14,7 +14,7 @@ import cats.instances.future._
 import com.mwam.kafkakewl.common._
 import com.mwam.kafkakewl.common.persistence.PersistentStoreFactory
 import com.mwam.kafkakewl.common.validation.Validation._
-import com.mwam.kafkakewl.common.validation.{PermissionStoreBuiltin, PermissionValidator}
+import com.mwam.kafkakewl.common.validation.{PermissionStoreBuiltin, PermissionValidator, TopologyValidatorConfig}
 import com.mwam.kafkakewl.domain.Command._
 import com.mwam.kafkakewl.domain.EntityCompactors._
 import com.mwam.kafkakewl.domain._
@@ -34,7 +34,8 @@ object CommandProcessorActor {
   final case class KafkaClusterCommandProcessorConfig(
     env: Env,
     jaasConfig: Option[String],
-    failFastIfDeploymentStateStoreInvalid: Boolean
+    failFastIfDeploymentStateStoreInvalid: Boolean,
+    topologyValidatorConfig: TopologyValidatorConfig
   )
 }
 

@@ -50,7 +50,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(nonKewl = NonKewlKafkaResources(topicRegexes = Seq("connect-.*"))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("Topics 'connect-offsets' are non-kewl in the kafka cluster 'test'")
@@ -64,7 +65,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(nonKewl = NonKewlKafkaResources(topicRegexes = Seq("connect-.*"))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("Topics 'connect-offsets' are non-kewl in the kafka cluster 'test'")
@@ -78,7 +80,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("something") -> TopicConfigDefaults.fromReplicaPlacement("{}"))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beValid
   }
@@ -91,7 +94,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster,
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage(s"'replicaPlacement' = 'something' is invalid: you should ask the administrators to setup pre-defined replica-placements for the kafka-cluster")
@@ -105,7 +109,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("another") -> TopicConfigDefaults.fromReplicaPlacement("{}"))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage(s"'replicaPlacement' = 'something' is invalid: possible pre-defined options: 'another'")
@@ -119,7 +124,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster,
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("if 'replicationFactor' is set it must be positive but '-1' is not")
@@ -133,7 +139,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster,
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("if 'replicationFactor' is set it must be positive but '0' is not")
@@ -147,7 +154,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster,
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beValid
   }
@@ -160,7 +168,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> TopicConfigDefaults.fromReplicaPlacement("{}"), ReplicaPlacementId("none") -> TopicConfigDefaults.noReplicaPlacement())),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("'replicationFactor' must not be set if there is a non-empty 'replicaPlacement' (= 'default'). Either remove the 'replicationFactor' property from topic 'test.topic1' or set the 'replicaPlacement' to one of the following: 'none'")
@@ -174,7 +183,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> TopicConfigDefaults.fromReplicaPlacement("{}"))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("'replicationFactor' must not be set if there is a non-empty 'replicaPlacement' (= 'default'). Remove the 'replicationFactor' property from topic 'test.topic1'")
@@ -188,7 +198,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> TopicConfigDefaults.fromReplicaPlacement("{}"), ReplicaPlacementId("none") -> TopicConfigDefaults.noReplicaPlacement())),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beValid
   }
@@ -206,7 +217,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("default") -> (TopicConfigDefaults.fromReplicaPlacement("{}") + TopicConfigDefault.noMinInsyncReplicas()))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("replicaPlacement = 'default' does not allow to set the 'min.insync.replicas' topic config. You can remove this topic config from your topic if you don't need it, set 'replicaPlacement' to another one that allows this config or sets it to value you need. Available replica-placements: 'default'")
@@ -225,7 +237,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("durable") -> TopicConfigDefaults.fromReplicaPlacement("{}", minInsyncReplicas = 2))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("replicaPlacement = 'durable' does not allow to set the 'min.insync.replicas' topic config. You can remove this topic config from your topic if you're happy with the replica-placement's default: '2', set 'replicaPlacement' to another one that allows this config or sets it to value you need. Available replica-placements: 'durable'")
@@ -244,7 +257,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(replicaPlacementConfigs = Map(ReplicaPlacementId("durable") -> TopicConfigDefaults.fromReplicaPlacement("{}", minInsyncReplicas = 2))),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("replicaPlacement = 'durable' does not allow to set the 'min.insync.replicas' topic config. You can remove this topic config from your topic because the replica-placement's default is the same as what you just set: '2'")
@@ -263,7 +277,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster,
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beValid
   }
@@ -281,7 +296,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(topicConfigKeysAllowedInTopologies = defaultTopicConfigsForTopologies),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beValid
   }
@@ -299,7 +315,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
       Some(topologyToDeploy),
       kafkaCluster.kafkaCluster,
       kafkaCluster.copy(topicConfigKeysAllowedInTopologies = defaultTopicConfigsForTopologies),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessages(
@@ -327,7 +344,8 @@ class TopologyToDeployValidatorStandaloneSpec extends FlatSpec
         ),
         topicConfigKeysAllowedInTopologies = defaultTopicConfigsForTopologies
       ),
-      topicDefaults
+      topicDefaults,
+      TopologyValidatorConfig.default
     )
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("The 'confluent.placement.constraints' topic config is not allowed by the administrators. If you really need to use this topic-config try setting the 'replicaPlacement' to one of the following: 'durable'")

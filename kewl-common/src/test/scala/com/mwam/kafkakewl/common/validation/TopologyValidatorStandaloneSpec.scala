@@ -23,7 +23,7 @@ class TopologyValidatorStandaloneSpec extends FlatSpec
   def validateTopology(
     newTopologyId: TopologyEntityId,
     newTopology: Topology
-  ): Validation.Result = TopologyValidator.validateTopology(Map.empty, newTopologyId, Some(newTopology), topicDefaults)
+  ): Validation.Result = TopologyValidator.validateTopology(Map.empty, newTopologyId, Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
 
   "topology with empty namespace and empty topology" should "be invalid" in {
     val actualValidationResult = validateTopology(TopologyEntityId("test"), Topology())

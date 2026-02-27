@@ -23,7 +23,7 @@ class TopologyValidatorStandaloneRelationshipsSpec extends FlatSpec
   def validateTopology(
     newTopologyId: TopologyEntityId,
     newTopology: Topology
-  ): Validation.Result = TopologyValidator.validateTopology(Map.empty, newTopologyId, Some(newTopology), topicDefaults)
+  ): Validation.Result = TopologyValidator.validateTopology(Map.empty, newTopologyId, Some(newTopology), topicDefaults, TopologyValidatorConfig.default)
 
   "a topology with a relationship with a topic that is not defined" should "be invalid" in {
     val topology = Topology(

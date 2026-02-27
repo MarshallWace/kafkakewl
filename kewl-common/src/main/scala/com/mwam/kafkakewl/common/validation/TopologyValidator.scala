@@ -12,6 +12,15 @@ import com.mwam.kafkakewl.domain.topology.{Topology, TopologyEntityId}
 
 import scala.collection.SortedSet
 
+final case class TopologyValidatorConfig(
+  disallowedDeveloperNameRegex: Option[String] = None,
+  disallowedApplicationUserNameRegex: Option[String] = None
+)
+
+object TopologyValidatorConfig {
+  val default: TopologyValidatorConfig = TopologyValidatorConfig()
+}
+
 object TopologyValidator {
   // TODO make it configurable
   val allowedCustomRelationships = SortedSet.empty[String]
@@ -20,10 +29,11 @@ object TopologyValidator {
     currentTopologiesMap: Map[TopologyEntityId, Topology],
     newTopologyId: TopologyEntityId,
     newTopologyOrNone: Option[Topology],
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     Seq(
-      newTopologyOrNone.map(TopologyValidatorStandalone.validateStandaloneTopology(newTopologyId, _)),
+      newTopologyOrNone.map(TopologyValidatorStandalone.validateStandaloneTopology(newTopologyId, _, validatorConfig)),
       Some(TopologyValidatorWithOthers.validateTopologyWithOthers(allowedCustomRelationships, currentTopologiesMap, newTopologyId, newTopologyOrNone, topicDefaults))
     ).flatten.combine()
   }

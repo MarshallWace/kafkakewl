@@ -12,5 +12,6 @@ import com.mwam.kafkakewl.domain.topology._
 object TopologyValidatorStandalone extends ValidationUtils with TopologyOperations {
   val topologyLikeValidator = new TopologyLikeValidatorStandalone[Topology.Node, Topology.Topic, Topology.Application, Topology.RelationshipProperties]()
 
-  val validateStandaloneTopology = topologyLikeValidator.validateStandaloneTopology _
+  def validateStandaloneTopology(topologyId: TopologyEntityId, topology: Topology, validatorConfig: TopologyValidatorConfig): Validation.Result =
+    topologyLikeValidator.validateStandaloneTopology(topologyId, topology, validatorConfig)
 }
