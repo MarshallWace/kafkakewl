@@ -37,7 +37,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessages(
@@ -59,7 +60,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessages(
@@ -83,7 +85,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("Topic 'test.topic-output' already exists in the kafka cluster")
@@ -102,7 +105,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessages(
@@ -123,7 +127,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("Topic 'connect-offsets' already exists in the kafka cluster")
@@ -141,7 +146,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("Topic 'connect-offsets' already exists in the kafka cluster")
@@ -160,7 +166,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("Topic 'connect-offsets' already exists in the kafka cluster")
@@ -178,7 +185,8 @@ class TopologyToDeployValidatorDependentSpec extends WordSpec
           Some(topologyToDeploy),
           kafkaCluster.kafkaCluster,
           kafkaCluster,
-          topicDefaults
+          topicDefaults,
+          TopologyValidatorConfig.default
         )
         actualValidationResult should beInvalid
         actualValidationResult should containMessage("Topic 'connect-offsets' already exists in the kafka cluster")

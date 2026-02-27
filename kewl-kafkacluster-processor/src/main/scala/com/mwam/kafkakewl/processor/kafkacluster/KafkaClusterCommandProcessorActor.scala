@@ -12,7 +12,7 @@ import com.mwam.kafkakewl.common.AllDeploymentEntities.InMemoryStateStores._
 import com.mwam.kafkakewl.common.AllDeploymentEntities.WritableStateStores._
 import com.mwam.kafkakewl.common._
 import com.mwam.kafkakewl.common.persistence.PersistentStoreFactory
-import com.mwam.kafkakewl.common.validation.validateDeploymentStateStore
+import com.mwam.kafkakewl.common.validation.{TopologyValidatorConfig, validateDeploymentStateStore}
 import com.mwam.kafkakewl.domain.Command.{HealthIsLive, HealthIsLiveResponse, HealthIsReady, HealthIsReadyResponse}
 import com.mwam.kafkakewl.domain._
 import com.mwam.kafkakewl.domain.deploy.{DeployedTopology, DeployedTopologyStateChange}
@@ -29,7 +29,8 @@ object KafkaClusterCommandProcessorActor {
     connection: KafkaConnection,
     kafkaCluster: KafkaCluster,
     topicDefaults: TopicDefaults,
-    failFastIfDeploymentStateStoreInvalid: Boolean
+    failFastIfDeploymentStateStoreInvalid: Boolean,
+    topologyValidatorConfig: TopologyValidatorConfig
   )
 
   final case class Result(
@@ -87,13 +88,13 @@ class KafkaClusterCommandProcessorActor(
     logger.info(s"loaded ${inMemoryStateStores.deployedTopology.getLatestLiveStates.size} deployedTopologies")
 
     if (config.failFastIfDeploymentStateStoreInvalid) {
-      validateDeploymentStateStore(logger, inMemoryStateStores, kafkaCluster, config.topicDefaults)
+      validateDeploymentStateStore(logger, inMemoryStateStores, kafkaCluster, config.topicDefaults, config.topologyValidatorConfig)
     } else {
       logger.info("skipping validating the deployment state store")
     }
 
     kafkaClusterAdmin = new DefaultKafkaClusterAdmin(config.kafkaClusterId, config.connection, config.kafkaCluster)
-    kafkaClusterCommandProcessor = new KafkaClusterCommandProcessing(config.kafkaClusterId, config.connection, kafkaClusterAdmin, config.topicDefaults)
+    kafkaClusterCommandProcessor = new KafkaClusterCommandProcessing(config.kafkaClusterId, config.connection, kafkaClusterAdmin, config.topicDefaults, config.topologyValidatorConfig)
 
     context.parent ! KafkaClusterCommandProcessorActor.DeployedTopologies(config.kafkaClusterId, inMemoryStateStores.deployedTopology.getLatestLiveStates)
     // TODO the response to this may arrive later than some other message, in which case those messages will use an out-of-date kafkaCluster.nonKewl

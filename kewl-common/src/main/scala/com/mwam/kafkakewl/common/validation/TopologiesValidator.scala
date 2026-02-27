@@ -17,14 +17,15 @@ object TopologiesValidator {
 
   def validateAllTopologies(
     currentTopologiesMap: Map[TopologyEntityId, Topology],
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     currentTopologiesMap
       .par
       .flatMap { case (topologyId, topology) =>
         Seq(
-          // validates the topology on itw own...
-          TopologyValidatorStandalone.validateStandaloneTopology(topologyId, topology),
+          // validates the topology on its own (standalone checks + disallowed name checks)...
+          TopologyValidatorStandalone.validateStandaloneTopology(topologyId, topology, validatorConfig),
           // ...then validates it against all the others
           validateTopologyExternalDependencies(
             allowedCustomRelationships,

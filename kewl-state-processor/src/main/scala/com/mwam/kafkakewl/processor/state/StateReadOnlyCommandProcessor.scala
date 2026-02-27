@@ -35,7 +35,7 @@ class StateReadOnlyCommandProcessor(
   with PermissionCommandResultCommon
   with MdcUtils {
 
-  val validateCommandFunc: ValidatorFunc = StateCommandProcessingValidator.validateCommand(config.kafkaClusterCommandProcessorJaasConfig, topicDefaults)
+  val validateCommandFunc: ValidatorFunc = StateCommandProcessingValidator.validateCommand(config.kafkaClusterCommandProcessorJaasConfig, topicDefaults, config.topologyValidatorConfig)
   // this is get/set from multiple threads (in theory a volatile would be enough though)
   val readableStateStores = new AtomicReference[AllStateEntities.ReadableVersionedStateStores](AllStateEntities.InMemoryVersionedStateStores().toReadableVersioned)
   val deployedTopologyStateStores = new AtomicReference(Map.empty[KafkaClusterEntityId, ReadableStateStore[DeployedTopology]])

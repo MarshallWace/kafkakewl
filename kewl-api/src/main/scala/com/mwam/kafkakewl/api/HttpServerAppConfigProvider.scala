@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.api
 
 import com.mwam.kafkakewl.common.http.HttpConfigProvider
 import com.mwam.kafkakewl.common.persistence.PersistentStoreConfig
+import com.mwam.kafkakewl.common.validation.TopologyValidatorConfig
 import com.mwam.kafkakewl.common.{ConfigProvider, Env, KafkaKewlSystemTopicConfig}
 import com.mwam.kafkakewl.domain.FlexibleName
 import com.mwam.kafkakewl.domain.topology.TopologyLike.TopicDefaults
@@ -77,4 +78,9 @@ trait HttpServerAppConfigProvider extends HttpConfigProvider with ConfigProvider
 
   val failFastIfStateStoreInvalid: Boolean = kafkaKewlApiConfig.getBooleanOrNone(s"state-command-processor.fail-fast-if-stateStore-invalid").getOrElse(true)
   val failFastIfDeploymentStateStoreInvalid: Boolean = kafkaKewlApiConfig.getBooleanOrNone(s"kafkacluster-command-processor.fail-fast-if-deployment-stateStore-invalid").getOrElse(true)
+
+  val topologyValidatorConfig: TopologyValidatorConfig = TopologyValidatorConfig(
+    disallowedDeveloperNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-developer-name-regex"),
+    disallowedApplicationUserNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-application-user-name-regex")
+  )
 }

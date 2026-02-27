@@ -37,12 +37,13 @@ private[state] object StateCommandProcessingValidator extends ValidationUtils {
     ss: AllStateEntities.ReadableStateStores,
     topologyId: TopologyEntityId,
     topologyOrNone: Option[Topology],
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     val deleteResult = if (topologyOrNone.isEmpty) validateTopologyDelete(ss, topologyId) else Validation.Result.success
 
     val currentTopologies = ss.topology.getLatestLiveStates.map(s => (TopologyEntityId(s.id), s.entity)).toMap
-    val validationResult = TopologyValidator.validateTopology(currentTopologies, topologyId, topologyOrNone, topicDefaults)
+    val validationResult = TopologyValidator.validateTopology(currentTopologies, topologyId, topologyOrNone, topicDefaults, validatorConfig)
 
     validationResult ++ deleteResult
   }
@@ -140,15 +141,15 @@ private[state] object StateCommandProcessingValidator extends ValidationUtils {
   def validateKafkaClusterId(kafkaClusterId: KafkaClusterEntityId): Result =
     kafkaClusterId.id.validateRegexWholeString("[^/]+", "kafka cluster id cannot be empty and cannot contain '/'")
 
-  def validateCommand(kafkaClusterCommandProcessorJaasConfig: Option[String], topicDefaults: TopicDefaults) : ValidatorFunc =
+  def validateCommand(kafkaClusterCommandProcessorJaasConfig: Option[String], topicDefaults: TopicDefaults, validatorConfig: TopologyValidatorConfig) : ValidatorFunc =
     (command: Command, ss: AllStateEntities.ReadableVersionedStateStores) =>
       command match {
         case c: Command.TopologyCreate =>
-          validateTopologyId(c.topologyId) ++ validateTopology(ss.toReadable, c.topologyId, Some(c.topology), topicDefaults)
+          validateTopologyId(c.topologyId) ++ validateTopology(ss.toReadable, c.topologyId, Some(c.topology), topicDefaults, validatorConfig)
         case c: Command.TopologyUpdate =>
-          validateTopology(ss.toReadable, c.topologyId, Some(c.topology), topicDefaults)
+          validateTopology(ss.toReadable, c.topologyId, Some(c.topology), topicDefaults, validatorConfig)
         case c: Command.TopologyDelete =>
-          EntityValidator.validateExists(ss.topology, c.topologyId) ++ validateTopology(ss.toReadable, c.topologyId, None, topicDefaults)
+          EntityValidator.validateExists(ss.topology, c.topologyId) ++ validateTopology(ss.toReadable, c.topologyId, None, topicDefaults, validatorConfig)
 
         case c: Command.KafkaClusterCreate =>
           validateKafkaClusterId(c.kafkaClusterId) ++

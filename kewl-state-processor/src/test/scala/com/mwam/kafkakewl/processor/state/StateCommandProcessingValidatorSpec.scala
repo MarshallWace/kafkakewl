@@ -8,6 +8,7 @@ package com.mwam.kafkakewl.processor.state
 
 import com.mwam.kafkakewl.common.{AllStateEntities, ValidationResultMatchers}
 import com.mwam.kafkakewl.common.AllStateEntities.InMemoryStateStores._
+import com.mwam.kafkakewl.common.validation.TopologyValidatorConfig
 import com.mwam.kafkakewl.domain.EntityStateMetadata
 import com.mwam.kafkakewl.domain.deploy.{Deployment, DeploymentStateChange, DeploymentTopologyVersion}
 import com.mwam.kafkakewl.domain.kafkacluster.{KafkaClusterAndTopology, KafkaClusterEntityId}
@@ -33,7 +34,7 @@ class StateCommandProcessingValidatorSpec extends FlatSpec
     val topologyVersion = 1
     ss.topology.applyEntityStateChange(topologyNewVersion("user", Topology(Namespace("test")), topologyVersion))
 
-    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults)
+    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults, TopologyValidatorConfig.default)
 
     actualValidationResult should beValid
   }
@@ -46,7 +47,7 @@ class StateCommandProcessingValidatorSpec extends FlatSpec
     ss.topology.applyEntityStateChange(topologyNewVersion("user", Topology(Namespace("test")), topologyVersion))
     ss.deployment.applyEntityStateChange(deploymentNewVersion("user", Deployment(kafkaClusterId, topologyId, DeploymentTopologyVersion.Exact(topologyVersion))))
 
-    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults)
+    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults, TopologyValidatorConfig.default)
 
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("cannot delete topology 'test' because there are deployments in 'test-cluster' kafka-cluster")
@@ -60,7 +61,7 @@ class StateCommandProcessingValidatorSpec extends FlatSpec
     ss.topology.applyEntityStateChange(topologyNewVersion("user", Topology(Namespace("test")), topologyVersion))
     ss.deployment.applyEntityStateChange(deploymentNewVersion("user", Deployment(kafkaClusterId, topologyId, DeploymentTopologyVersion.Remove())))
 
-    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults)
+    val actualValidationResult = StateCommandProcessingValidator.validateTopology(ss.toReadable, topologyId, None, topicDefaults, TopologyValidatorConfig.default)
 
     actualValidationResult should beInvalid
     actualValidationResult should containMessage("cannot delete topology 'test' because there are deployments in 'test-cluster' kafka-cluster")

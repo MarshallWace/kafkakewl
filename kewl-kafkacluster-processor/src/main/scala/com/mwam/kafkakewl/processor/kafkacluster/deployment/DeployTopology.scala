@@ -9,7 +9,7 @@ package com.mwam.kafkakewl.processor.kafkacluster.deployment
 import cats.instances.map._
 import cats.instances.set._
 import cats.kernel.Monoid
-import com.mwam.kafkakewl.common.validation.TopologyToDeployValidator
+import com.mwam.kafkakewl.common.validation.{TopologyToDeployValidator, TopologyValidatorConfig}
 import com.mwam.kafkakewl.common.{AuthorizationCode, ReadableStateStore}
 import com.mwam.kafkakewl.domain._
 import com.mwam.kafkakewl.domain.deploy.{DeployedTopology, DeployedTopologyStateChange, DeploymentAllowUnsafeKafkaClusterChange, TopologyToDeployWithVersion}
@@ -275,6 +275,7 @@ private[kafkacluster] trait DeployTopology {
   val kafkaClusterAdmin: KafkaClusterAdmin
   protected val logger: Logger
   val topicDefaults: TopicDefaults
+  val topologyValidatorConfig: TopologyValidatorConfig
 
   private def kafkaClusterItemsOfCluster(
     command: KafkaClusterCommand,
@@ -583,7 +584,7 @@ private[kafkacluster] trait DeployTopology {
     for {
       // fail-fast validation
       _ <-  withDurationOf {
-        TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults)
+        TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, Some(topologyToDeploy), kafkaClusterId, kafkaCluster, topicDefaults, topologyValidatorConfig)
           .toEither
           .left.map(f => command.failedResult(f.toList))
       } { duration =>
@@ -733,7 +734,7 @@ private[kafkacluster] trait DeployTopology {
         for {
           // fail-fast validation
           _ <- withDurationOf {
-              TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, None, kafkaClusterId, kafkaCluster, topicDefaults)
+              TopologyToDeployValidator.validateTopology(currentTopologies, topologyId, None, kafkaClusterId, kafkaCluster, topicDefaults, topologyValidatorConfig)
                 .toEither
                 .left.map(f => command.failedResult(f.toList))
             } { duration =>

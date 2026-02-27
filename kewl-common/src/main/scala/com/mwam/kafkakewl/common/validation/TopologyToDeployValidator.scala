@@ -134,10 +134,11 @@ object TopologyToDeployValidator {
     newTopologyId: TopologyEntityId,
     newTopologyOrNone: Option[TopologyToDeploy],
     kafkaClusterId: KafkaClusterEntityId,
-    kafkaCluster: KafkaCluster
+    kafkaCluster: KafkaCluster,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     Seq(
-      newTopologyOrNone.map(TopologyToDeployValidatorStandalone.validateStandaloneTopology(newTopologyId, _)),
+      newTopologyOrNone.map(TopologyToDeployValidatorStandalone.validateStandaloneTopology(newTopologyId, _, validatorConfig)),
       newTopologyOrNone.map(ensureTopicNamesAreNotNonKewl(kafkaClusterId, kafkaCluster.nonKewl, _)),
       newTopologyOrNone.map(ensureGroupNamesAreNotNonKewl(kafkaClusterId, kafkaCluster.nonKewl, _)),
       newTopologyOrNone.map(validateTopologyTopics(kafkaCluster, _))
@@ -150,10 +151,11 @@ object TopologyToDeployValidator {
     newTopologyOrNone: Option[TopologyToDeploy],
     kafkaClusterId: KafkaClusterEntityId,
     kafkaCluster: KafkaCluster,
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     Seq(
-      validateStandaloneTopology(newTopologyId, newTopologyOrNone, kafkaClusterId, kafkaCluster),
+      validateStandaloneTopology(newTopologyId, newTopologyOrNone, kafkaClusterId, kafkaCluster, validatorConfig),
       TopologyToDeployValidatorWithOthers.validateTopologyWithOthers(TopologyValidator.allowedCustomRelationships, currentTopologiesMap, newTopologyId, newTopologyOrNone, topicDefaults),
     ).combine()
   }

@@ -10,6 +10,7 @@ import com.mwam.kafkakewl.common.ReadableStateStore
 import com.mwam.kafkakewl.common.deployedtopology.DeployedTopologyExtraSyntax
 import com.mwam.kafkakewl.common.topology.TopologyToDeployOperations
 import com.mwam.kafkakewl.domain._
+import com.mwam.kafkakewl.common.validation.TopologyValidatorConfig
 import com.mwam.kafkakewl.domain.deploy.DeployedTopology
 import com.mwam.kafkakewl.domain.kafkacluster.{KafkaCluster, KafkaClusterEntityId}
 import com.mwam.kafkakewl.domain.topology.TopologyLike.TopicDefaults
@@ -44,7 +45,8 @@ private[kafkacluster] class KafkaClusterCommandProcessing(
   val kafkaClusterId: KafkaClusterEntityId,
   val connection: KafkaConnection,
   val kafkaClusterAdmin: KafkaClusterAdmin,
-  val topicDefaults: TopicDefaults
+  val topicDefaults: TopicDefaults,
+  val topologyValidatorConfig: TopologyValidatorConfig
 )(implicit executionContext: ExecutionContextExecutor) extends DeployedTopologyExtraSyntax
   with DeployTopology
   with ResetDeployedTopology

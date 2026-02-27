@@ -24,6 +24,7 @@ import com.mwam.kafkakewl.domain.topology.TopologyLike._
 trait TopologyLike[ApplicationType <: Application, TopicType <: Topic, RelationshipPropertiesType] {
   val namespace: Namespace
   val topology: TopologyId
+  val developers: Seq[String]
   val topics: Map[LocalTopicId, TopicType]
   val applications: Map[LocalApplicationId, ApplicationType]
   val aliases: LocalAliases

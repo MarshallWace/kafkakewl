@@ -81,7 +81,8 @@ trait KafkaClusterProcessorParentActor {
             kafkaConnection,
             kafkaCluster,
             topicDefaults,
-            kafkaClusterProcessorConfig.failFastIfDeploymentStateStoreInvalid
+            kafkaClusterProcessorConfig.failFastIfDeploymentStateStoreInvalid,
+            kafkaClusterProcessorConfig.topologyValidatorConfig
           ),
           persistentStoreFactory
         )

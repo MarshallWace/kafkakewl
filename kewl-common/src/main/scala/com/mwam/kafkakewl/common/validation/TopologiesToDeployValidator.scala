@@ -21,14 +21,15 @@ object TopologiesToDeployValidator {
     currentTopologiesMap: Map[TopologyEntityId, TopologyToDeploy],
     kafkaClusterId: KafkaClusterEntityId,
     kafkaCluster: KafkaCluster,
-    topicDefaults: TopicDefaults
+    topicDefaults: TopicDefaults,
+    validatorConfig: TopologyValidatorConfig
   ): Validation.Result = {
     currentTopologiesMap
       .par
       .flatMap { case (topologyId, topology) =>
         Seq(
           // validates the topology on itw own...
-          TopologyToDeployValidator.validateStandaloneTopology(topologyId, topology.some, kafkaClusterId, kafkaCluster),
+          TopologyToDeployValidator.validateStandaloneTopology(topologyId, topology.some, kafkaClusterId, kafkaCluster, validatorConfig),
           // ...then validates it against all the others
           validateTopologyExternalDependencies(
             allowedCustomRelationships,
