@@ -438,11 +438,11 @@ class KafkaClusterItemsSpec extends FlatSpec with TestTopologiesToDeploy with Te
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:developer1", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // developer1 uses personal consumer group "user.developer1.*" instead of the application's group to avoid rebalancing
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple
       ).mapValues(_.withOwnerTopologyId(TopologyEntityId("test")))
 
     assert(actualKafkaClusterItems == expectedKafkaClusterItems)
@@ -480,11 +480,11 @@ class KafkaClusterItemsSpec extends FlatSpec with TestTopologiesToDeploy with Te
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:developer1", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // developer1 uses personal consumer group "user.developer1.*" instead of the application's group to avoid rebalancing
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
-        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple
       ).mapValues(_.withOwnerTopologyId(TopologyEntityId("test")))
 
     assert(actualKafkaClusterItems == expectedKafkaClusterItems)
@@ -1663,8 +1663,8 @@ class KafkaClusterItemsSpec extends FlatSpec with TestTopologiesToDeploy with Te
         // developer1 (full access, empty namespace) developer ACLs
         KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:developer1", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
-        // developer1 as additional application user (empty namespace compensation)
-        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // developer1 as additional application user (empty namespace compensation): topic ACLs only, no app consumer group
+        // (developers use their personal consumer group "user.developer1.*" to avoid rebalancing the application's group)
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
         KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,

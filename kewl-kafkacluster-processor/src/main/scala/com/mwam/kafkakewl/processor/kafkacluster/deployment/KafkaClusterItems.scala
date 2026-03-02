@@ -381,9 +381,11 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
     // topics, acls, etc...
     val topics = topologyToDeploy.fullyQualifiedTopics.values.flatMap(forTopic(resolveTopicConfig)).map(KafkaClusterItemOfTopology(_, topologyId))
 
-    // if the topology is in the root namespace (i.e. empty string), its developers will be additional users of all applications
-    // this is like this to compensate for the lack of namespace prefix acls for developers (we don't want to give developers * permissions for everything,#
+    // if the topology is in the root namespace (i.e. empty string), its developers will be additional users of all application-topic relationships
+    // this is like this to compensate for the lack of namespace prefix acls for developers (we don't want to give developers * permissions for everything,
     // just because the topology doesn't have a namespace)
+    // note: developers are NOT added as additional users of applications themselves (forApplication) to avoid giving them the application's
+    // consumer group ACL, which would allow them to join the group and trigger rebalances. Developers have their own personal consumer groups instead.
     val additionalApplicationDevelopers = if (topologyToDeploy.namespace.isEmpty) {
       topologyToDeploy.developers
     } else {
@@ -397,7 +399,7 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
     }
 
     val consumerGroupAcls = topologyToDeploy.fullyQualifiedApplications
-      .flatMap { case (id, a) => forApplication(a, consumingApplicationIds.contains(id), additionalApplicationDevelopers) }
+      .flatMap { case (id, a) => forApplication(a, consumingApplicationIds.contains(id)) }
       .map(KafkaClusterItemOfTopology(_, topologyId))
 
     developerAcls ++
