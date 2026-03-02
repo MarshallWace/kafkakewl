@@ -113,11 +113,94 @@ class TopologyValidatorDisallowedNamesSpec extends FlatSpec
     result should containMessage("developer names 'tmp_bob', 'use-tmp', 'contains-tmp-inside' are disallowed")
   }
 
+  // --- developers and readOnlyDevelopers overlap ---
+
+  "topology with overlapping developers and readOnlyDevelopers" should "be rejected" in {
+    val topology = Topology(
+      Namespace("test"),
+      developers = Seq("alice", "bob"),
+      readOnlyDevelopers = Seq("bob", "carol")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, TopologyValidatorConfig.default)
+    result should beInvalid
+    result should containMessage("developer names 'bob' appear in both developers and readOnlyDevelopers")
+  }
+
+  "topology with non-overlapping developers and readOnlyDevelopers" should "be valid" in {
+    val topology = Topology(
+      Namespace("test"),
+      developers = Seq("alice"),
+      readOnlyDevelopers = Seq("bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, TopologyValidatorConfig.default)
+    result should beValid
+  }
+
+  // --- duplicate read-only developer names ---
+
+  "topology with duplicate read-only developer names" should "be rejected" in {
+    val topology = Topology(
+      Namespace("test"),
+      readOnlyDevelopers = Seq("bob", "carol", "bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, TopologyValidatorConfig.default)
+    result should beInvalid
+    result should containMessage("duplicate read-only developer names: 'bob'")
+  }
+
+  // --- disallowed read-only developer name regex ---
+
+  "topology with no disallowed read-only developer name regex configured" should "accept any read-only developer names" in {
+    val topology = Topology(
+      Namespace("test"),
+      readOnlyDevelopers = Seq("tmp_alice", "bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, TopologyValidatorConfig.default)
+    result should beValid
+  }
+
+  "topology with disallowed read-only developer name regex" should "reject matching read-only developer names" in {
+    val config = TopologyValidatorConfig(disallowedReadOnlyDeveloperNameRegex = Some("^tmp_.+"))
+    val topology = Topology(
+      Namespace("test"),
+      readOnlyDevelopers = Seq("tmp_alice", "bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, config)
+    result should beInvalid
+    result should containMessage("read-only developer names 'tmp_alice' are disallowed (matching regex '^tmp_.+')")
+  }
+
+  "topology with disallowed read-only developer name regex" should "accept non-matching read-only developer names" in {
+    val config = TopologyValidatorConfig(disallowedReadOnlyDeveloperNameRegex = Some("^tmp_.+"))
+    val topology = Topology(
+      Namespace("test"),
+      readOnlyDevelopers = Seq("alice", "bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, config)
+    result should beValid
+  }
+
+  "topology with disallowed read-only developer name regex" should "use its own regex, not the developer one" in {
+    val config = TopologyValidatorConfig(
+      disallowedDeveloperNameRegex = Some("^tmp_.+"),
+      disallowedReadOnlyDeveloperNameRegex = Some("^ro_.+")
+    )
+    val topology = Topology(
+      Namespace("test"),
+      developers = Seq("alice"),
+      readOnlyDevelopers = Seq("tmp_alice", "ro_bob")
+    )
+    val result = validateTopology(TopologyEntityId("test"), topology, config)
+    result should beInvalid
+    result should containMessage("read-only developer names 'ro_bob' are disallowed (matching regex '^ro_.+')")
+  }
+
   // --- TopologyValidatorConfig.default ---
 
   "TopologyValidatorConfig.default" should "have no restrictions" in {
     val config = TopologyValidatorConfig.default
     config.disallowedDeveloperNameRegex shouldBe None
+    config.disallowedReadOnlyDeveloperNameRegex shouldBe None
     config.disallowedApplicationUserNameRegex shouldBe None
   }
 

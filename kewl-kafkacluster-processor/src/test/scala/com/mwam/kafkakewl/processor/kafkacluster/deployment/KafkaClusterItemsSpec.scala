@@ -1583,4 +1583,106 @@ class KafkaClusterItemsSpec extends FlatSpec with TestTopologiesToDeploy with Te
 
     assert(actualKafkaClusterItems == expectedKafkaClusterItems)
   }
+
+  "a topology with readOnlyDevelopers and developersAccess=Full" should "generate the correct kafka cluster items" in {
+    val topology: TopologyToDeploy =
+      TopologyToDeploy(
+        namespace = Namespace("test"),
+        developers = Seq("developer1"),
+        readOnlyDevelopers = Seq("ro-developer1"),
+        developersAccess = DevelopersAccess.Full,
+        topics = Map("topic1" -> TopologyToDeploy.Topic("test.topic1")).toMapByTopicId,
+        applications = Map("processor" -> TopologyToDeploy.Application("service-test-processor").makeSimple(Some("test.processor"))).toMapByApplicationId,
+        relationships = Map(
+          toDeployRelationshipFrom("processor", (RelationshipType.Consume(), Seq(("topic1", None))))
+        )
+      )
+
+    val actualKafkaClusterItems = KafkaClusterItems.forAllTopologies(
+      kafkaCluster.resolveTopicConfig,
+      noCurrentTopologies,
+      isKafkaClusterSecurityEnabled = true,
+      topologyId = TopologyEntityId("test"),
+      topology,
+      topicDefaults
+    ).map(i => (i.kafkaClusterItem.key, i)).toMap
+
+    val expectedKafkaClusterItems =
+      Map(
+        KafkaClusterItem.Topic("test.topic1", 1, 3, config = Map.empty).toTuple,
+        // developer1 gets Full access ACLs
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:developer1", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TRANSACTIONAL_ID, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.ALL, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.CREATE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:developer1", "*", AclOperation.DELETE, AclPermissionType.ALLOW).toTuple,
+        // ro-developer1 gets only TopicReadOnly ACLs (DESCRIBE and READ, no WRITE/IDEMPOTENT_WRITE/CREATE/DELETE)
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.ro-developer1", "User:ro-developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:ro-developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.PREFIXED, "test", "User:ro-developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // application ACLs (processor consumes topic1)
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple
+      ).mapValues(_.withOwnerTopologyId(TopologyEntityId("test")))
+
+    assert(actualKafkaClusterItems == expectedKafkaClusterItems)
+  }
+
+  "a topology with empty namespace and readOnlyDevelopers" should "generate the correct kafka cluster items" in {
+    val topology: TopologyToDeploy =
+      TopologyToDeploy(
+        Namespace(""),
+        TopologyId("test"),
+        developers = Seq("developer1"),
+        readOnlyDevelopers = Seq("ro-developer1"),
+        developersAccess = DevelopersAccess.Full,
+        topics = Map("topic1" -> TopologyToDeploy.Topic("test.topic1")).toMapByTopicId,
+        applications = Map("processor" -> TopologyToDeploy.Application("service-test-processor").makeSimple(Some("test.processor"))).toMapByApplicationId,
+        relationships = Map(
+          toDeployRelationshipFrom("processor", (RelationshipType.Consume(), Seq(("topic1", None))), (RelationshipType.Produce(), Seq(("topic1", None))))
+        )
+      )
+
+    val actualKafkaClusterItems = KafkaClusterItems.forAllTopologies(
+      kafkaCluster.resolveTopicConfig,
+      noCurrentTopologies,
+      isKafkaClusterSecurityEnabled = true,
+      topologyId = TopologyEntityId("test"),
+      topology,
+      topicDefaults
+    ).map(i => (i.kafkaClusterItem.key, i)).toMap
+
+    val expectedKafkaClusterItems =
+      Map(
+        KafkaClusterItem.Topic("test.topic1", 1, 3, config = Map.empty).toTuple,
+        // developer1 (full access, empty namespace) developer ACLs
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.developer1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:developer1", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
+        // developer1 as additional application user (empty namespace compensation)
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:developer1", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple,
+        // ro-developer1 developer ACLs (empty namespace TopicReadOnly = no namespace ACLs, just personal consumer group)
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "user.ro-developer1", "User:ro-developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // ro-developer1 as additional read-only application user (empty namespace compensation): consume only, no app consumer group
+        // (read-only developers use their personal consumer group "user.ro-developer1.*" to avoid rebalancing the application's group)
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:ro-developer1", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:ro-developer1", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        // ro-developer1 does NOT get WRITE on the topic (produce relationship excluded for read-only)
+        // application ACLs (service-test-processor)
+        KafkaClusterItem.Acl(ResourceType.CLUSTER, PatternType.LITERAL, "kafka-cluster", "User:service-test-processor", "*", AclOperation.IDEMPOTENT_WRITE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.LITERAL, "test.processor", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.WRITE, AclPermissionType.ALLOW).toTuple
+      ).mapValues(_.withOwnerTopologyId(TopologyEntityId("test")))
+
+    assert(actualKafkaClusterItems == expectedKafkaClusterItems)
+  }
 }

@@ -87,6 +87,26 @@ class TopologyLikeValidatorStandalone[NodeType, TopicType <: TopologyLike.Topic 
       case None => Validation.Result.success
     }
 
+  def validateDevelopersAndReadOnlyDevelopersOverlap(developers: Seq[String], readOnlyDevelopers: Seq[String]): Validation.Result = {
+    val overlap = developers.toSet.intersect(readOnlyDevelopers.toSet).toSeq.sorted
+    Validation.Result.validationErrorIf(
+      overlap.nonEmpty,
+      s"developer names ${overlap.map(_.quote).mkString(", ")} appear in both developers and readOnlyDevelopers"
+    )
+  }
+
+  def validateDisallowedReadOnlyDeveloperNames(readOnlyDevelopers: Seq[String], disallowedRegex: Option[String]): Validation.Result =
+    disallowedRegex match {
+      case Some(regex) =>
+        val pattern = regex.r
+        val disallowed = readOnlyDevelopers.filter(d => pattern.findFirstIn(d).isDefined)
+        Validation.Result.validationErrorIf(
+          disallowed.nonEmpty,
+          s"read-only developer names ${disallowed.map(_.quote).mkString(", ")} are disallowed (matching regex '$regex')"
+        )
+      case None => Validation.Result.success
+    }
+
   def validateStandaloneTopology(topologyId: TopologyEntityId, topology: TopologyType, validatorConfig: TopologyValidatorConfig): Validation.Result = {
     def isPartOfNamespace(name: String): Boolean = topology.namespace.contains(name)
 
@@ -148,7 +168,11 @@ class TopologyLikeValidatorStandalone[NodeType, TopicType <: TopologyLike.Topic 
       //      Validation.Result.validationErrorIf(duplicateTransactionalIds.nonEmpty, s"duplicate transactional ids: ${duplicateTransactionalIds.map(_.quote).mkString(", ")}"),
       topology.fullyQualifiedTopics.values.map(validateTopologyTopic).combine(),
       topology.fullyQualifiedApplications.values.map(validateTopologyApplication).combine(),
-      validateDisallowedDeveloperNames(topology.developers, validatorConfig.disallowedDeveloperNameRegex)
+      validateDisallowedDeveloperNames(topology.developers, validatorConfig.disallowedDeveloperNameRegex),
+      validateDisallowedReadOnlyDeveloperNames(topology.readOnlyDevelopers, validatorConfig.disallowedReadOnlyDeveloperNameRegex),
+      validateDevelopersAndReadOnlyDevelopersOverlap(topology.developers, topology.readOnlyDevelopers),
+      // no duplicate validation for developers to avoid breaking existing persisted topologies on startup (failFast)
+      { val dupes = topology.readOnlyDevelopers.duplicates; Validation.Result.validationErrorIf(dupes.nonEmpty, s"duplicate read-only developer names: ${dupes.map(_.quote).mkString(", ")}") }
     ).combine()
   }
 }

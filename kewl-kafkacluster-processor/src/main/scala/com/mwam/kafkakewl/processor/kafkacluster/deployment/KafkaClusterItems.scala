@@ -123,6 +123,7 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
     val namespace = topologyToDeploy.namespace
     val namespacePrefix = namespace.ns // just to be consistent, no trailing dot
     val developers = topologyToDeploy.developers
+    val readOnlyDevelopers = topologyToDeploy.readOnlyDevelopers
     val developersAccess = topologyToDeploy.developersAccess
 
     def personalConsumerGroupAcl(user: String) = Seq(
@@ -130,20 +131,20 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
       allowGroup(resourceName =  s"user.$user", user, AclOperation.READ, PatternType.PREFIXED)
     )
 
-    def topologyNamespaceAcls(user: String): Seq[KafkaClusterItem.Acl] =
+    def topologyNamespaceAcls(user: String, devAccess: DevelopersAccess): Seq[KafkaClusterItem.Acl] =
       if (namespace.isEmpty) {
         // if the namespace is empty, the developers don't get any namespace prefix permissions to avoid * acls
         // as a compensation they will be permissioned the same way as applications' users
 
         // they still get the AclOperation.IDEMPOTENT_WRITE ACL in case of DevelopersAccess.Full
-        developersAccess match {
+        devAccess match {
           case DevelopersAccess.Full => Seq(
             allowCluster(user, AclOperation.IDEMPOTENT_WRITE),
           )
           case DevelopersAccess.TopicReadOnly => Seq.empty
         }
       } else {
-        developersAccess match {
+        devAccess match {
           case DevelopersAccess.Full => Seq(
             // in case of full-access: full prefixed access for this namespace (read/write/describe topics, read groups/all transactionalids, create topics[for kstreams])
             allowTopic(resourceName = namespacePrefix, user, AclOperation.DESCRIBE, PatternType.PREFIXED),
@@ -164,7 +165,7 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
         }
       }
 
-    def externalTopicAcls(user: String): Seq[KafkaClusterItem.Acl] =
+    def externalTopicAcls(user: String, devAccess: DevelopersAccess): Seq[KafkaClusterItem.Acl] =
       resolvedRelationships
       .filter(_.resolveNode2.topologyNode.topologyId != topologyId)
       .map(_.resolveNode2.topologyNode.node)
@@ -185,7 +186,7 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
           someIf(canBeConsumed, allowTopic(resourceName = topicName, user, AclOperation.READ, PatternType.LITERAL))
         ).flatten
 
-        val specificAcls = developersAccess match {
+        val specificAcls = devAccess match {
           case DevelopersAccess.Full => Seq(
             // with full-access only it gets the write for producable topics
             someIf(canBeProduced, allowTopic(resourceName = topicName, user, AclOperation.WRITE, PatternType.LITERAL))
@@ -196,11 +197,18 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
         commonAcls ++ specificAcls
     })
 
-    for {
+    val regularDeveloperAcls = for {
       user <- developers
       // deduplicating only the namespace and external topics acls (just to be more explicit and always have the personal consumer group ACL)
-      acl <- personalConsumerGroupAcl(user) ++ deduplicateAcls(topologyNamespaceAcls(user) ++ externalTopicAcls(user))
+      acl <- personalConsumerGroupAcl(user) ++ deduplicateAcls(topologyNamespaceAcls(user, developersAccess) ++ externalTopicAcls(user, developersAccess))
     } yield acl
+
+    val readOnlyDeveloperAcls = for {
+      user <- readOnlyDevelopers
+      acl <- personalConsumerGroupAcl(user) ++ deduplicateAcls(topologyNamespaceAcls(user, DevelopersAccess.TopicReadOnly) ++ externalTopicAcls(user, DevelopersAccess.TopicReadOnly))
+    } yield acl
+
+    regularDeveloperAcls ++ readOnlyDeveloperAcls
   }
 
   def forTopic(resolveTopicConfig: ResolveTopicConfig)(topic: TopologyToDeploy.Topic): Option[KafkaClusterItem.Topic] = {
@@ -319,7 +327,8 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
   }
 
   def forApplicationTopicRelationship(
-    additionalUsers: Seq[String] = Seq.empty
+    additionalUsers: Seq[String] = Seq.empty,
+    additionalReadOnlyUsers: Seq[String] = Seq.empty
   )(
     relationship: TopologyToDeploy.ApplicationTopicRelationship
   ): Seq[KafkaClusterItemOfTopology] = {
@@ -329,13 +338,21 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
     val topicName = topicNode.name
     val host = applicationNode.host
     val users = Seq(applicationNode.user) ++ additionalUsers
-    users.flatMap { user =>
+    val fullUserAcls = users.flatMap { user =>
       relationship.relationship match {
         case _: RelationshipType.Consume => forConsume(ownerTopologyIds, user, host, topicName)
         case _: RelationshipType.Produce => forProduce(ownerTopologyIds, user, host, topicName)
         case _ => Seq.empty
       }
     }
+    // read-only users only get consume ACLs, never produce
+    val readOnlyUserAcls = additionalReadOnlyUsers.flatMap { user =>
+      relationship.relationship match {
+        case _: RelationshipType.Consume => forConsume(ownerTopologyIds, user, host, topicName)
+        case _ => Seq.empty
+      }
+    }
+    fullUserAcls ++ readOnlyUserAcls
   }
 
   def forTopology(
@@ -373,6 +390,12 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
       Seq.empty
     }
 
+    val additionalReadOnlyApplicationDevelopers = if (topologyToDeploy.namespace.isEmpty) {
+      topologyToDeploy.readOnlyDevelopers
+    } else {
+      Seq.empty
+    }
+
     val consumerGroupAcls = topologyToDeploy.fullyQualifiedApplications
       .flatMap { case (id, a) => forApplication(a, consumingApplicationIds.contains(id), additionalApplicationDevelopers) }
       .map(KafkaClusterItemOfTopology(_, topologyId))
@@ -380,7 +403,7 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
     developerAcls ++
       topics ++
       consumerGroupAcls ++
-      relevantRelationships.flatMap(forApplicationTopicRelationship(additionalApplicationDevelopers))
+      relevantRelationships.flatMap(forApplicationTopicRelationship(additionalApplicationDevelopers, additionalReadOnlyApplicationDevelopers))
   }
 
   def forAllTopologies(

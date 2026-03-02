@@ -166,6 +166,7 @@ object TopologyDeployable {
       topology.topology.validNel,
       topology.description.validNel,
       topology.developers.validNel,
+      topology.readOnlyDevelopers.validNel,
       topology.developersAccess.value(variables).toValidated,
       topology.deployWithAuthorizationCode.value(variables).toValidated.map(_.some),
       topology.topics.map(makeTopicDeployable(topology)).toVector.sequence[MakeDeployableResult, (LocalTopicId, TopologyToDeploy.Topic)].map(_.toMap),
