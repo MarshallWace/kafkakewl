@@ -25,6 +25,7 @@ trait TopologyLike[ApplicationType <: Application, TopicType <: Topic, Relations
   val namespace: Namespace
   val topology: TopologyId
   val developers: Seq[String]
+  val readOnlyDevelopers: Seq[String]
   val topics: Map[LocalTopicId, TopicType]
   val applications: Map[LocalApplicationId, ApplicationType]
   val aliases: LocalAliases

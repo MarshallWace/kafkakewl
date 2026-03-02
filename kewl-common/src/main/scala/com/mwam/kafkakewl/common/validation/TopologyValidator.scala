@@ -14,6 +14,7 @@ import scala.collection.SortedSet
 
 final case class TopologyValidatorConfig(
   disallowedDeveloperNameRegex: Option[String] = None,
+  disallowedReadOnlyDeveloperNameRegex: Option[String] = None,
   disallowedApplicationUserNameRegex: Option[String] = None
 )
 

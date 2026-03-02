@@ -25,6 +25,50 @@ class TopologyToDeployValidatorDisallowedNamesSpec extends FlatSpec
 
   val topicDefaults: TopicDefaults = TopicDefaults()
 
+  // --- developers and readOnlyDevelopers overlap ---
+
+  "topology-to-deploy with overlapping developers and readOnlyDevelopers" should "be rejected" in {
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      developers = Seq("alice", "bob"),
+      readOnlyDevelopers = Seq("bob", "carol")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, TopologyValidatorConfig.default
+    )
+    result should beInvalid
+    result should containMessage("developer names 'bob' appear in both developers and readOnlyDevelopers")
+  }
+
+  "topology-to-deploy with non-overlapping developers and readOnlyDevelopers" should "be valid" in {
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      developers = Seq("alice"),
+      readOnlyDevelopers = Seq("bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, TopologyValidatorConfig.default
+    )
+    result should beValid
+  }
+
+  // --- duplicate read-only developer names ---
+
+  "topology-to-deploy with duplicate read-only developer names" should "be rejected" in {
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      readOnlyDevelopers = Seq("bob", "carol", "bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, TopologyValidatorConfig.default
+    )
+    result should beInvalid
+    result should containMessage("duplicate read-only developer names: 'bob'")
+  }
+
   // --- disallowed developer name regex (resolved TopologyToDeploy) ---
 
   "topology-to-deploy with no disallowed developer name regex" should "accept any developer names" in {
@@ -78,6 +122,65 @@ class TopologyToDeployValidatorDisallowedNamesSpec extends FlatSpec
       kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, config
     )
     result should beValid
+  }
+
+  // --- disallowed read-only developer name regex (resolved TopologyToDeploy) ---
+
+  "topology-to-deploy with no disallowed read-only developer name regex" should "accept any read-only developer names" in {
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      readOnlyDevelopers = Seq("tmp_alice", "bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, TopologyValidatorConfig.default
+    )
+    result should beValid
+  }
+
+  "topology-to-deploy with disallowed read-only developer name regex" should "reject matching read-only developer names" in {
+    val config = TopologyValidatorConfig(disallowedReadOnlyDeveloperNameRegex = Some("^tmp_.+"))
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      readOnlyDevelopers = Seq("tmp_alice", "bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, config
+    )
+    result should beInvalid
+    result should containMessage("read-only developer names 'tmp_alice' are disallowed (matching regex '^tmp_.+')")
+  }
+
+  "topology-to-deploy with disallowed read-only developer name regex" should "accept non-matching read-only developer names" in {
+    val config = TopologyValidatorConfig(disallowedReadOnlyDeveloperNameRegex = Some("^tmp_.+"))
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      readOnlyDevelopers = Seq("alice", "bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, config
+    )
+    result should beValid
+  }
+
+  "topology-to-deploy with disallowed read-only developer name regex" should "use its own regex, not the developer one" in {
+    val config = TopologyValidatorConfig(
+      disallowedDeveloperNameRegex = Some("^tmp_.+"),
+      disallowedReadOnlyDeveloperNameRegex = Some("^ro_.+")
+    )
+    val topology = TopologyToDeploy(
+      namespace = Namespace("test"),
+      developers = Seq("alice"),
+      readOnlyDevelopers = Seq("tmp_alice", "ro_bob")
+    )
+    val result = TopologyToDeployValidator.validateTopology(
+      Map.empty, TopologyEntityId("test"), Some(topology),
+      kafkaCluster.kafkaCluster, kafkaCluster, topicDefaults, config
+    )
+    result should beInvalid
+    result should containMessage("read-only developer names 'ro_bob' are disallowed (matching regex '^ro_.+')")
   }
 
   // --- disallowed application user name regex (resolved TopologyToDeploy) ---

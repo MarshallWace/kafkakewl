@@ -28,6 +28,7 @@ final case class TopologyToDeployCompact(
   topology: TopologyId,
   description: Option[String],
   developers: Seq[String],
+  readOnlyDevelopers: Seq[String],
   developersAccess: DevelopersAccess,
   deployWithAuthorizationCode: Option[Boolean],
   tags: Seq[String] = Seq.empty,
@@ -39,6 +40,7 @@ final case class TopologyToDeploy(
   topology: TopologyId = TopologyId(""),
   description: Option[String] = None,
   developers: Seq[String] = Seq.empty,
+  readOnlyDevelopers: Seq[String] = Seq.empty,
   developersAccess: DevelopersAccess = DevelopersAccess.TopicReadOnly,
   deployWithAuthorizationCode: Option[Boolean] = None,  // it's an option to make it backwards compatible, be able to read existing deployed-topologies from json,
                                                         // and fall back to the kafka-clusters requireAuthorizationCode property if it's not there.
@@ -54,7 +56,7 @@ final case class TopologyToDeploy(
 
 object TopologyToDeploy {
   def compact(t: TopologyToDeploy) =
-    TopologyToDeployCompact(t.namespace, t.topology, t.description, t.developers, t.developersAccess, t.deployWithAuthorizationCode, t.tags, t.labels)
+    TopologyToDeployCompact(t.namespace, t.topology, t.description, t.developers, t.readOnlyDevelopers, t.developersAccess, t.deployWithAuthorizationCode, t.tags, t.labels)
 
   implicit class TopologyToDeployExtensions(topologyToDeploy: TopologyToDeploy) {
     def topicOrCommandErrors(topicId: TopicId): ValueOrCommandErrors[TopologyToDeploy.Topic] =
@@ -166,6 +168,7 @@ object TopologyToDeploy {
     topology: TopologyId,
     description: Option[String] = None,
     developers: Seq[String] = Seq.empty,
+    readOnlyDevelopers: Seq[String] = Seq.empty,
     developersAccess: DevelopersAccess = DevelopersAccess.TopicReadOnly,
     topics: Map[TopicId, Topic] = Map.empty,
     applications: Map[ApplicationId, Application] = Map.empty,
@@ -181,6 +184,7 @@ object TopologyToDeploy {
         topology.topology,
         topology.description,
         topology.developers,
+        topology.readOnlyDevelopers,
         topology.developersAccess,
         topology.fullyQualifiedTopics,
         topology.fullyQualifiedApplications,

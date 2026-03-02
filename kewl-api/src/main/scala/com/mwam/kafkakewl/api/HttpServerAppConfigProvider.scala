@@ -81,6 +81,7 @@ trait HttpServerAppConfigProvider extends HttpConfigProvider with ConfigProvider
 
   val topologyValidatorConfig: TopologyValidatorConfig = TopologyValidatorConfig(
     disallowedDeveloperNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-developer-name-regex"),
+    disallowedReadOnlyDeveloperNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-readonly-developer-name-regex"),
     disallowedApplicationUserNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-application-user-name-regex")
   )
 }

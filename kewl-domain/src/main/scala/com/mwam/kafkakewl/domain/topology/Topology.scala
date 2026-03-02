@@ -33,6 +33,7 @@ final case class TopologyCompact(
   topology: TopologyId,
   description: Option[String],
   developers: Seq[String],
+  readOnlyDevelopers: Seq[String],
   developersAccess: DevelopersAccessExpr,
   deployWithAuthorizationCode: DeployWithAuthorizationCodeExpr,
   tags: TagsExpr = Seq.empty,
@@ -45,6 +46,7 @@ final case class Topology(
   description: Option[String] = None,
   environments: DeploymentEnvironments.Variables = DeploymentEnvironments.Variables.empty,
   developers: Seq[String] = Seq.empty,
+  readOnlyDevelopers: Seq[String] = Seq.empty,
   developersAccess: DevelopersAccessExpr = DevelopersAccessExpr(Expressions.fromVariable(DeploymentEnvironments.Variables.Builtin.developersAccess)),
   deployWithAuthorizationCode: DeployWithAuthorizationCodeExpr = DeployWithAuthorizationCodeExpr(Expressions.fromVariable(DeploymentEnvironments.Variables.Builtin.deployWithAuthorizationCode)),
   topics: Map[LocalTopicId, Topic] = Map.empty,
@@ -65,7 +67,7 @@ object TopologyStateChange {
 
 object Topology {
   def compact(t: Topology) =
-    TopologyCompact(t.namespace, t.topology, t.description, t.developers, t.developersAccess, t.deployWithAuthorizationCode, t.tags, t.labels)
+    TopologyCompact(t.namespace, t.topology, t.description, t.developers, t.readOnlyDevelopers, t.developersAccess, t.deployWithAuthorizationCode, t.tags, t.labels)
 
   final case class DevelopersAccessExpr(expr: String)
     extends Expressions.CustomExpression[DevelopersAccess](
@@ -192,6 +194,7 @@ object Topology {
     topology: TopologyId,
     description: Option[String] = None,
     developers: Seq[String] = Seq.empty,
+    readOnlyDevelopers: Seq[String] = Seq.empty,
     developersAccess: DevelopersAccessExpr = DevelopersAccessExpr(Expressions.fromVariable(DeploymentEnvironments.Variables.Builtin.developersAccess)),
     topics: Map[TopicId, Topic] = Map.empty,
     applications: Map[ApplicationId, Application] = Map.empty,
@@ -207,6 +210,7 @@ object Topology {
         topology.topology,
         topology.description,
         topology.developers,
+        topology.readOnlyDevelopers,
         topology.developersAccess,
         topology.fullyQualifiedTopics,
         topology.fullyQualifiedApplications,
