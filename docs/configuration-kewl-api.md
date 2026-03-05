@@ -83,6 +83,12 @@ For details see the `otherConsumerNamespaces` field in the [topics in topologies
 
 For details see the `otherProducerNamespaces` field in the [topics in topologies](topology/TopologyTopic.md).
 
+`KAFKAKEWL_API_DISALLOWED_DEVELOPER_NAME_REGEX`: an optional regex to disallow certain developer names, by default empty (no restriction).
+
+`KAFKAKEWL_API_DISALLOWED_READONLY_DEVELOPER_NAME_REGEX`: an optional regex to disallow certain read-only developer names, by default empty (no restriction). Works the same way as the developer name regex but applies to the `readOnlyDevelopers` field.
+
+`KAFKAKEWL_API_DISALLOWED_APPLICATION_USER_NAME_REGEX`: an optional regex to disallow certain application user names, by default empty (no restriction).
+
 The kafkakewl super-users can manipulate any topology, permissions, kafke-clusters and deployments. Basically they can do anything.
 
 # Configuring the **com.mwam.kafkakewl.extensions.builtin.SameUserAuthPlugin**
