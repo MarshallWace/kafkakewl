@@ -46,11 +46,14 @@ The relationships object contains the applications' local ids as keys, and relat
 {
   "namespace": "projectx",
   "developers": ["joe", "sue"],
+  "readOnlyDevelopers": ["bob"],
   ...
 }
 ```
 
 The developers field can contain an optional list of users who should be able to run all applications in this topology. These users will have all the necessary ACLs to be able to run the applications.
+
+The `readOnlyDevelopers` field is similar, but these users always get read-only topic access (`TopicReadOnly`) in all environments, regardless of the `developersAccess` setting. A user cannot appear in both `developers` and `readOnlyDevelopers`.
 
 ## Using variables
 

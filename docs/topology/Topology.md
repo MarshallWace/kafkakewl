@@ -48,6 +48,10 @@ Developers are able to run all applications in the topology with their own user,
 
 Its default value is the variable `${developers-access}`, which is defined as `Full` in test clusters and `TopicReadOnly` in prod clusters. So if you don't specify it at all, you'll most likely get the behavior you want, but you can also specify it and override the default variable.
 
+**`readOnlyDevelopers`**: `Array[String]?` - a list of user names who get read-only access to all topics in all deployments
+
+Unlike regular `developers` whose access level depends on `developersAccess`, read-only developers always get `TopicReadOnly` access (DESCRIBE and READ on topics, plus a personal consumer group). A user cannot appear in both `developers` and `readOnlyDevelopers`. This field is optional and defaults to an empty array. When empty, it is omitted from the JSON response.
+
 **`deployWithAuthorizationCode`**: `Boolean?` - indicates whether this topology requires an authorization code when deployed or not.
 
 Its default value is the variable `${deploy-with-authorization-code}`, which is defines as `true` in the prod clusters, `false` everywhere else. It's useful to set it to `false` if you want to deploy your topology in an automated way even to prod. DO NOT set it to false, unless you have a good reason.
@@ -74,6 +78,7 @@ A simple topology with a single topic that's produced and consumed:
 {
   "namespace": "projectx",
   "developers": ["my-user-name"],
+  "readOnlyDevelopers": ["another-user"],
   "topics": {
     "test-topic": { "name": "test-topic", "partitions": 4 }
   },

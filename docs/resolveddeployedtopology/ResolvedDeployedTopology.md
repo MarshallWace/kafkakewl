@@ -10,6 +10,8 @@ Most of these fields means the same as in the [topology](../topology/Topology.md
 
 **`developers`**: `Array[String]?` - the developers of the topology
 
+**`readOnlyDevelopers`**: `Array[String]?` - the read-only developers of the topology
+
 **`developersAccess`**: `String` - the developers' access
 
 **`topics`**: [`Map[String, Topic]`](../topology/TopologyTopic.md) - the kafka topics in this topology
