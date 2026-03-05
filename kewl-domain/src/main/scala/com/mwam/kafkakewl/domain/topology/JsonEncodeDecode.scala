@@ -240,11 +240,13 @@ object JsonEncodeDecode {
   // resolved topology and related types
   implicit val topologyNodeIdNodeIdRelationshipEncoder: Encoder[Topology.NodeIdNodeIdRelationship] = deriveConfiguredEncoder
   implicit val topologyNodeIdNodeIdRelationshipDecoder: Decoder[Topology.NodeIdNodeIdRelationship] = deriveConfiguredDecoder
-  implicit val resolvedTopologyEncoder: Encoder[Topology.ResolvedTopology] = encoderWithoutDefaultLabelledWithExpr(deriveConfiguredEncoder)
+  implicit val resolvedTopologyEncoder: Encoder[Topology.ResolvedTopology] = encoderWithoutDefaultLabelledWithExpr(deriveConfiguredEncoder[Topology.ResolvedTopology]).mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
   implicit val resolvedTopologyDecoder: Decoder[Topology.ResolvedTopology] = deriveConfiguredDecoder
 
   // entities
-  implicit val topologyEncoder: Encoder[Topology] = encoderWithoutDefaultLabelledWithExpr(deriveConfiguredEncoder)
+  implicit val topologyCompactEncoder: Encoder[TopologyCompact] = deriveConfiguredEncoder[TopologyCompact].mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
+
+  implicit val topologyEncoder: Encoder[Topology] = encoderWithoutDefaultLabelledWithExpr(deriveConfiguredEncoder[Topology]).mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
   implicit val topologyDecoder: Decoder[Topology] = deriveConfiguredDecoder
 
   // entity state changes
@@ -303,10 +305,12 @@ object JsonEncodeDecode {
   // resolved topology and related types
   implicit val topologyToDeployNodeIdNodeIdRelationshipEncoder: Encoder[TopologyToDeploy.NodeIdNodeIdRelationship] = deriveConfiguredEncoder
   implicit val topologyToDeployNodeIdNodeIdRelationshipDecoder: Decoder[TopologyToDeploy.NodeIdNodeIdRelationship] = deriveConfiguredDecoder
-  implicit val resolvedTopologyToDeployEncoder: Encoder[TopologyToDeploy.ResolvedTopology] = encoderWithoutDefaultLabelled(deriveConfiguredEncoder)
+  implicit val resolvedTopologyToDeployEncoder: Encoder[TopologyToDeploy.ResolvedTopology] = encoderWithoutDefaultLabelled(deriveConfiguredEncoder[TopologyToDeploy.ResolvedTopology]).mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
   implicit val resolvedTopologyToDeployDecoder: Decoder[TopologyToDeploy.ResolvedTopology] = deriveConfiguredDecoder
 
   // entities
-  implicit val topologyToDeployEncoder: Encoder[TopologyToDeploy] = encoderWithoutDefaultLabelled(deriveConfiguredEncoder)
+  implicit val topologyToDeployCompactEncoder: Encoder[TopologyToDeployCompact] = deriveConfiguredEncoder[TopologyToDeployCompact].mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
+
+  implicit val topologyToDeployEncoder: Encoder[TopologyToDeploy] = encoderWithoutDefaultLabelled(deriveConfiguredEncoder[TopologyToDeploy]).mapJson(removeArrayFieldIfEmpty("readOnlyDevelopers"))
   implicit val topologyToDeployDecoder: Decoder[TopologyToDeploy] = deriveConfiguredDecoder
 }

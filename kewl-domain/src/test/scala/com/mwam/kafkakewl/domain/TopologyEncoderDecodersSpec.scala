@@ -199,4 +199,96 @@ class TopologyEncoderDecodersSpec extends FlatSpec
     val kafkaStreamsTypeAsJson = """{"kafkaStreamsAppId":"kstreams-app-id"}"""
     assert(kafkaStreamsType == decode[Topology.Application.Type](kafkaStreamsTypeAsJson).right.get)
   }
+
+  /**
+    * readOnlyDevelopers encoding/decoding
+    */
+
+  "Topology with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val topology = Topology(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice"))
+    val json = topology.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+    assert(json.hcursor.downField("developers").as[Seq[String]].right.get == Seq("alice"))
+    // round-trip
+    assert(topology == decode[Topology](json.noSpaces).right.get)
+  }
+
+  "Topology with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val topology = Topology(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice"), readOnlyDevelopers = Seq("bob"))
+    val json = topology.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+    assert(topology == decode[Topology](json.noSpaces).right.get)
+  }
+
+  "Topology decoded from json without readOnlyDevelopers" should "default to empty" in {
+    val json = """{"namespace":"ns","topology":"t","developers":["alice"],"developersAccess":"${developers-access}","deployWithAuthorizationCode":"${deploy-with-authorization-code}","topics":{},"applications":{},"aliases":{"topics":{},"applications":{}},"relationships":{}}"""
+    val topology = decode[Topology](json).right.get
+    assert(topology.readOnlyDevelopers == Seq.empty)
+  }
+
+  "TopologyCompact with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val compact = Topology.compact(Topology(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice")))
+    val json = compact.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+  }
+
+  "TopologyCompact with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val compact = Topology.compact(Topology(namespace = Namespace("ns"), topology = TopologyId("t"), readOnlyDevelopers = Seq("bob")))
+    val json = compact.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+  }
+
+  "Topology.ResolvedTopology with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val resolved = Topology.ResolvedTopology(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice"))
+    val json = resolved.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+    assert(resolved == decode[Topology.ResolvedTopology](json.noSpaces).right.get)
+  }
+
+  "Topology.ResolvedTopology with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val resolved = Topology.ResolvedTopology(namespace = Namespace("ns"), topology = TopologyId("t"), readOnlyDevelopers = Seq("bob"))
+    val json = resolved.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+    assert(resolved == decode[Topology.ResolvedTopology](json.noSpaces).right.get)
+  }
+
+  "TopologyToDeploy with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val topologyToDeploy = TopologyToDeploy(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice"))
+    val json = topologyToDeploy.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+    assert(topologyToDeploy == decode[TopologyToDeploy](json.noSpaces).right.get)
+  }
+
+  "TopologyToDeploy with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val topologyToDeploy = TopologyToDeploy(namespace = Namespace("ns"), topology = TopologyId("t"), readOnlyDevelopers = Seq("bob"))
+    val json = topologyToDeploy.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+    assert(topologyToDeploy == decode[TopologyToDeploy](json.noSpaces).right.get)
+  }
+
+  "TopologyToDeploy.ResolvedTopology with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val resolved = TopologyToDeploy.ResolvedTopology(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice"))
+    val json = resolved.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+    assert(resolved == decode[TopologyToDeploy.ResolvedTopology](json.noSpaces).right.get)
+  }
+
+  "TopologyToDeploy.ResolvedTopology with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val resolved = TopologyToDeploy.ResolvedTopology(namespace = Namespace("ns"), topology = TopologyId("t"), readOnlyDevelopers = Seq("bob"))
+    val json = resolved.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+    assert(resolved == decode[TopologyToDeploy.ResolvedTopology](json.noSpaces).right.get)
+  }
+
+  "TopologyToDeployCompact with empty readOnlyDevelopers" should "omit readOnlyDevelopers from json" in {
+    val compact = TopologyToDeploy.compact(TopologyToDeploy(namespace = Namespace("ns"), topology = TopologyId("t"), developers = Seq("alice")))
+    val json = compact.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").failed)
+  }
+
+  "TopologyToDeployCompact with non-empty readOnlyDevelopers" should "include readOnlyDevelopers in json" in {
+    val compact = TopologyToDeploy.compact(TopologyToDeploy(namespace = Namespace("ns"), topology = TopologyId("t"), readOnlyDevelopers = Seq("bob")))
+    val json = compact.asJson
+    assert(json.hcursor.downField("readOnlyDevelopers").as[Seq[String]].right.get == Seq("bob"))
+  }
 }
