@@ -121,4 +121,4 @@ private fun errors(throwable: Throwable): List<String> = listOf(throwable.messag
  *   the statuses of the topology deployments.
  */
 @Serializable
-data class DeploymentsSuccess(val statuses: Map<TopologyId, TopologyDeploymentStatus>) : QueryDeploymentsFailure
+data class DeploymentsSuccess(val statuses: Map<TopologyId, TopologyDeploymentStatus>)
