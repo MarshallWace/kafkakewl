@@ -74,8 +74,8 @@ trait TestTopologiesToDeployCommon {
   }
 
   implicit class ApplicationExtensions(application: TopologyToDeploy.Application) {
-    def makeSimple(consumerGroup: Option[String] = None, transactionalId: Option[String] = None): TopologyToDeploy.Application =
-      application.copy(`type` = TopologyToDeploy.Application.Type.Simple(consumerGroup, transactionalId))
+    def makeSimple(consumerGroup: Option[String] = None, transactionalId: Option[String] = None, isConsumerGroupPrefix: Boolean = false): TopologyToDeploy.Application =
+      application.copy(`type` = TopologyToDeploy.Application.Type.Simple(consumerGroup, transactionalId, isConsumerGroupPrefix))
     def makeKafkaStreams(kafkaStreamsAppId: String): TopologyToDeploy.Application =
       application.copy(`type` = TopologyToDeploy.Application.Type.KafkaStreams(kafkaStreamsAppId))
     def makeConnector(connector: String): TopologyToDeploy.Application =

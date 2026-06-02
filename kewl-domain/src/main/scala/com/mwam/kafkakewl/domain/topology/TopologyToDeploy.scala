@@ -104,7 +104,7 @@ object TopologyToDeploy {
 
     def actualConsumerGroup: Option[String] = {
       `type` match {
-        case Application.Type.Simple(consumerGroup, _) => consumerGroup
+        case Application.Type.Simple(consumerGroup, _, _) => consumerGroup
         case Application.Type.KafkaStreams(kafkaStreamsAppId) => Some(kafkaStreamsAppId)
         case _ => None
       }
@@ -112,7 +112,7 @@ object TopologyToDeploy {
 
     def actualTransactionalId: Option[String] = {
       `type` match {
-        case Application.Type.Simple(_, Some(transactionalId)) => Some(transactionalId)
+        case Application.Type.Simple(_, Some(transactionalId), _) => Some(transactionalId)
         case Application.Type.KafkaStreams(kafkaStreamsAppId) => Some(kafkaStreamsAppId)
         case _ => None
       }
@@ -122,6 +122,8 @@ object TopologyToDeploy {
     def isKafkaStreams: Boolean = typeAsKafkaStreams.isDefined
     def isConnector: Boolean = typeAsConnector.isDefined
     def isConnectReplicator: Boolean = typeAsConnectReplicator.isDefined
+
+    def isConsumerGroupPrefix: Boolean = typeAsSimple.exists(_.isConsumerGroupPrefix)
 
     def simpleConsumerGroup: Option[String] = typeAsSimple.flatMap(_.consumerGroup)
     def simpleTransactionalId: Option[String] = typeAsSimple.flatMap(_.transactionalId)
@@ -137,7 +139,7 @@ object TopologyToDeploy {
   object Application {
     sealed trait Type
     object Type {
-      final case class Simple(consumerGroup: Option[String] = None, transactionalId: Option[String] = None) extends Type
+      final case class Simple(consumerGroup: Option[String] = None, transactionalId: Option[String] = None, isConsumerGroupPrefix: Boolean = false) extends Type
       final case class KafkaStreams(kafkaStreamsAppId: String) extends Type
       final case class Connector(connector: String) extends Type
       final case class ConnectReplicator(connectReplicator: String) extends Type

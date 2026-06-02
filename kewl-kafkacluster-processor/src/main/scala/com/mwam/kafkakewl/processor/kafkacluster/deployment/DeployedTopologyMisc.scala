@@ -99,21 +99,25 @@ private[kafkacluster] trait DeployedTopologyMisc {
         .map(r => (r.resolveNode2.topologyNode.node.name, r.resolveNode2.topologyNode.nodeId.id))
         .toMap
 
-      consumerGroupStats <- application.actualConsumerGroup
-        // there is consumer group for the application
-        .map { consumerGroupId =>
-          kafkaClusterAdmin.getConsumerGroupInfo(consumerGroupId)
-            .map(i =>
-              i.copy(topics =
-                i.topics
-                  // filtering for topics with consume-relationship to this app, as well as mapping back to the topic-id
-                  .flatMap { case (topicName, topicInfo) => consumedTopicIdsByName.get(topicName).map((_, topicInfo)) }
+      consumerGroupStats <- {
+        // for prefix consumer-group apps there is no single real group to query - return None like a producer-only app
+        if (application.isConsumerGroupPrefix) Right(None)
+        else application.actualConsumerGroup
+          // there is consumer group for the application
+          .map { consumerGroupId =>
+            kafkaClusterAdmin.getConsumerGroupInfo(consumerGroupId)
+              .map(i =>
+                i.copy(topics =
+                  i.topics
+                    // filtering for topics with consume-relationship to this app, as well as mapping back to the topic-id
+                    .flatMap { case (topicName, topicInfo) => consumedTopicIdsByName.get(topicName).map((_, topicInfo)) }
+                )
               )
-            )
-            .map(Some(_))
-        }
-        // no consumer group -> it's fine, it'll be None
-        .getOrElse(Right(None))
+              .map(Some(_))
+          }
+          // no consumer group -> it's fine, it'll be None
+          .getOrElse(Right(None))
+      }
     } yield KafkaClusterCommandResponse.DeployedApplication(command.applicationId, application, consumerGroupStats)
 
     result

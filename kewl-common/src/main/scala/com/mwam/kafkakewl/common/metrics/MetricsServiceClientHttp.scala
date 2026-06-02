@@ -58,7 +58,9 @@ class MetricsServiceClientHttp(
         // for all applications, gathering the consumer group (if there is any) and the set of topics that it actually consumes via relationships
         // the topics are needed because later we need to filter for the topics' consumer group status which are actually consumed
         case (applicationId, application) =>
-          application.actualConsumerGroup.map { consumerGroup =>
+          // prefix consumer-group apps don't have a single real consumer group to track - skip them, matching the lag tracker
+          if (application.isConsumerGroupPrefix) None
+          else application.actualConsumerGroup.map { consumerGroup =>
             val consumedTopicNames = allRelationshipsOfApplication(currentTopologies, topology.topologyEntityId, topology, applicationId, topicDefaults)
               .collect {
                 case r: TopologyToDeploy.ApplicationTopicRelationship if r.monitorConsumerLag =>
