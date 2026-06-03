@@ -55,7 +55,8 @@ class MetricsServiceImpl(
 
       // application infos - at the moment never None, but the consumer-group metrics inside can be
       val applicationInfos = topology.fullyQualifiedApplications.mapValues { application =>
-        val consumerGroupMetrics = for {
+        // prefix consumer-group apps don't have a single real consumer group whose lag can be condensed - no metrics for them
+        val consumerGroupMetrics = if (application.isConsumerGroupPrefix) None else for {
           consumerGroupId <- application.actualConsumerGroup
           consumerGroupMetrics <- allConsumerGroupMetrics.get(consumerGroupId).flatMap(_.toOption)
         } yield consumerGroupMetrics
@@ -112,7 +113,8 @@ class MetricsServiceImpl(
 
       val consumerGroupStatuses = topology.applications.values
         .flatMap { application =>
-          for {
+          if (application.isConsumerGroupPrefix) None
+          else for {
             consumerGroupId <- application.actualConsumerGroup
             consumerGroupMetrics <- allConsumerGroupMetrics.get(consumerGroupId).flatMap(_.toOption)
           } yield consumerGroupMetrics.values.flatMap(_.values).map(_.status)

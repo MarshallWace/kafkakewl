@@ -949,6 +949,41 @@ class KafkaClusterItemsSpec extends FlatSpec with TestTopologiesToDeploy with Te
     assert(actualKafkaClusterItems == expectedKafkaClusterItems)
   }
 
+  "a simple standalone topology with isConsumerGroupPrefix=true" should "generate a PREFIXED group ACL instead of LITERAL" in {
+    val topology: TopologyToDeploy =
+      TopologyToDeploy(
+        Namespace("test"),
+        topics = Map(
+          "topic1" -> TopologyToDeploy.Topic("test.topic1", config = Map("retention.ms" -> "31536000000"))
+        ).toMapByTopicId,
+        applications = Map(
+          "processor" -> TopologyToDeploy.Application("service-test-processor").makeSimple(Some("test.processor."), isConsumerGroupPrefix = true)
+        ).toMapByApplicationId,
+        relationships = Map(
+          toDeployRelationshipFrom("processor", (RelationshipType.Consume(), Seq(("topic1", None))))
+        )
+      )
+
+    val actualKafkaClusterItems = KafkaClusterItems.forAllTopologies(
+      kafkaCluster.resolveTopicConfig,
+      noCurrentTopologies,
+      isKafkaClusterSecurityEnabled = true,
+      topologyId = TopologyEntityId("test"),
+      topology,
+      topicDefaults
+    ).map(i => (i.kafkaClusterItem.key, i)).toMap
+
+    val expectedKafkaClusterItems =
+      Map(
+        KafkaClusterItem.Topic("test.topic1", 1, 3, config = Map("retention.ms" -> "31536000000")).toTuple,
+        KafkaClusterItem.Acl(ResourceType.GROUP, PatternType.PREFIXED, "test.processor.", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.DESCRIBE, AclPermissionType.ALLOW).toTuple,
+        KafkaClusterItem.Acl(ResourceType.TOPIC, PatternType.LITERAL, "test.topic1", "User:service-test-processor", "*", AclOperation.READ, AclPermissionType.ALLOW).toTuple
+      ).mapValues(_.withOwnerTopologyId(TopologyEntityId("test")))
+
+    assert(actualKafkaClusterItems == expectedKafkaClusterItems)
+  }
+
   "a simple standalone topology with kafka streams" should "generate the correct kafka cluster items" in {
     val topology: TopologyToDeploy =
       TopologyToDeploy(

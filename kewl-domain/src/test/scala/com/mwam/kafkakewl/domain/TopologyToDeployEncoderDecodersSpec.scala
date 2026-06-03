@@ -128,6 +128,27 @@ class TopologyToDeployEncoderDecodersSpec extends FlatSpec
     assert(applications == decode[Map[LocalApplicationId, TopologyToDeploy.Application]]("""{"connector-app-id":{"user":"${service-user}","host":null,"type":{"connector":"connector-app"}},"kafkastreams-app-id":{"user":"${service-user}","type":{"kafkaStreamsAppId":"kafkastreams-app"}},"connect-replicator-app-id":{"user":"${service-user}","type":{"connectReplicator":"connect-replicator"},"description":null,"otherConsumableNamespaces":[],"otherProducableNamespaces":[]},"simple-consumer-app-id":{"user":"service-user","type":{"consumerGroup":"simple-consumer-app"}},"simple-producer-app-id":{"user":"service-user","tags":["tag1"],"labels":{"label1":"value1"}}}""").right.get)
   }
 
+  "a simple application with isConsumerGroupPrefix=true" should "be encoded/decoded correctly" in {
+    val app = TopologyToDeploy.Application(user = "service-user").makeSimple(consumerGroup = Some("simple-consumer-app"), isConsumerGroupPrefix = true)
+    val appAsJson = """{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null,"isConsumerGroupPrefix":true},"consumerLagWindowSeconds":null}"""
+    assert(app.asJson.noSpaces == appAsJson)
+    assert(app == decode[TopologyToDeploy.Application](appAsJson).right.get)
+    // the Application-level helper used by ACL generation and lag-tracking sees the flag
+    assert(app.isConsumerGroupPrefix)
+    assert(!TopologyToDeploy.Application(user = "service-user").makeSimple(consumerGroup = Some("simple-consumer-app")).isConsumerGroupPrefix)
+    assert(!TopologyToDeploy.Application(user = "service-user").makeKafkaStreams("kstreams-app").isConsumerGroupPrefix)
+  }
+
+  "a simple application with explicit isConsumerGroupPrefix=false" should "decode the same as one with the field absent" in {
+    val app = TopologyToDeploy.Application(user = "service-user").makeSimple(consumerGroup = Some("simple-consumer-app"))
+    val withFlag = decode[TopologyToDeploy.Application]("""{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null,"isConsumerGroupPrefix":false},"consumerLagWindowSeconds":null}""").right.get
+    val withoutFlag = decode[TopologyToDeploy.Application]("""{"user":"service-user","type":{"consumerGroup":"simple-consumer-app"}}""").right.get
+    assert(app == withFlag)
+    assert(app == withoutFlag)
+    // the default must not be serialised
+    assert(app.asJson.noSpaces == """{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null},"consumerLagWindowSeconds":null}""")
+  }
+
   /**
     * Relationships
     */

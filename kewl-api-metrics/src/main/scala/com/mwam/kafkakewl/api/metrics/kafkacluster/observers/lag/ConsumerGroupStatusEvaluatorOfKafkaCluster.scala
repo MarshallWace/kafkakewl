@@ -71,7 +71,19 @@ class ConsumerGroupStatusEvaluatorOfKafkaCluster(
       .flatMap(_.topologyWithVersion)
       .flatMap(_.topology.applications.values)
       .flatMap { application =>
-        application.actualConsumerGroup.map { consumerGroup =>
+        // Skip applications whose consumerGroup is a prefix: this map is keyed by exact consumer-group name, so a prefix
+        // string like "myapp." wouldn't match the real ephemeral groups (e.g. "myapp.foo", "myapp.bar") that Kafka actually
+        // reports via __consumer_offsets. Those ephemeral groups are still tracked individually - an actor is created per
+        // (group, topic, partition) when offsets are committed - but we can't find the owning prefix app from a real
+        // group name without a reverse lookup (walk all prefix-apps, match by prefix), which is also ambiguous when
+        // prefixes overlap across topologies.
+        //
+        // Consequence: the per-app consumerLagWindowSeconds is NOT applied to any ephemeral group matching the prefix.
+        // Each per-group actor falls back to the cluster default (lag-evaluating.default-window-minutes - shipped as
+        // 5 minutes in application.conf; HttpServerAppConfigProvider.scala:81 has a 10-minute code-side fallback only
+        // for when the config key is unset entirely - see also ConsumerGroupTopicPartitionStatusActor.scala:334).
+        if (application.isConsumerGroupPrefix) None
+        else application.actualConsumerGroup.map { consumerGroup =>
           (consumerGroup, ConsumerGroupMetricsConfig(application.consumerLagWindowSeconds.map(Duration(_, TimeUnit.SECONDS))))
         }
       }

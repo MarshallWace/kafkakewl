@@ -156,6 +156,8 @@ object TopologyLike {
 
     def actualConsumerGroup: Option[String]
 
+    def isConsumerGroupPrefix: Boolean
+
     def simpleConsumerGroup: Option[String]
     def simpleTransactionalId: Option[String]
     def kafkaStreamsAppId: Option[String]

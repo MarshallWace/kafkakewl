@@ -186,7 +186,7 @@ object DeployedTopologyMigrate {
 
     private def migrateApplication(applicationIdApplication: (LocalApplicationId, TopologyToDeploy.Application)): Json = {
       val (localApplicationId, application) = applicationIdApplication
-      Json.obj(
+      val applicationJson = Json.obj(
         Array(
           "id" -> Json.fromString(localApplicationId.id),
           "user" -> Json.fromString(application.user),
@@ -204,6 +204,10 @@ object DeployedTopologyMigrate {
           "labels" -> json(application.labels),
         ).withoutEmptyOrNull: _*
       )
+      if (application.isConsumerGroupPrefix)
+        applicationJson.andLogMigrationMessage(s"application ${localApplicationId.id} has isConsumerGroupPrefix=true which isn't supported in vnext")
+      else
+        applicationJson
     }
 
     private def migrateTopicAlias(aliasIdNodes: (LocalAliasId, Seq[FlexibleNodeId])): Json = {

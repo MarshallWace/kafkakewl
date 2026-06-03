@@ -136,6 +136,23 @@ class TopologyEncoderDecodersSpec extends FlatSpec
     assert(applications == decode[Map[LocalApplicationId, Topology.Application]]("""{"connector-app-id":{"user":"${service-user}","type":{"connector":"connector-app"},"description":null,"otherConsumableNamespaces":[],"otherProducableNamespaces":[]},"kafkastreams-app-id":{"user":"${service-user}","type":{"kafkaStreamsAppId":"kafkastreams-app"}},"connect-replicator-app-id":{"user":"${service-user}","host":null,"type":{"connectReplicator":"connect-replicator"}},"simple-consumer-app-id":{"user":"service-user","type":{"consumerGroup":"simple-consumer-app"}},"simple-producer-app-id":{"user":"service-user","tags":["tag1"],"labels":{"label1":"value1"}}}""").right.get)
   }
 
+  "a simple application with isConsumerGroupPrefix=true" should "be encoded/decoded correctly" in {
+    val app = Topology.Application(user = Topology.UserExpr("service-user")).makeSimple(consumerGroup = Some("simple-consumer-app"), isConsumerGroupPrefix = true)
+    val appAsJson = """{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null,"isConsumerGroupPrefix":true},"consumerLagWindowSeconds":null}"""
+    assert(app.asJson.noSpaces == appAsJson)
+    assert(app == decode[Topology.Application](appAsJson).right.get)
+  }
+
+  "a simple application with explicit isConsumerGroupPrefix=false" should "decode the same as one with the field absent" in {
+    val app = Topology.Application(user = Topology.UserExpr("service-user")).makeSimple(consumerGroup = Some("simple-consumer-app"))
+    val withFlag = decode[Topology.Application]("""{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null,"isConsumerGroupPrefix":false},"consumerLagWindowSeconds":null}""").right.get
+    val withoutFlag = decode[Topology.Application]("""{"user":"service-user","type":{"consumerGroup":"simple-consumer-app"}}""").right.get
+    assert(app == withFlag)
+    assert(app == withoutFlag)
+    // the default must not be serialised
+    assert(app.asJson.noSpaces == """{"user":"service-user","type":{"consumerGroup":"simple-consumer-app","transactionalId":null},"consumerLagWindowSeconds":null}""")
+  }
+
   /**
     * Relationships
     */

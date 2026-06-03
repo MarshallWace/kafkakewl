@@ -254,7 +254,10 @@ private[kafkacluster] object KafkaClusterItems extends TopologyLikeOperations[To
         // the ACL to read the application's consumer group is needed only if there is a consuming relationship for this application in this topology
         // OR this application is exposed to consume other topologies' topics
           application.actualConsumerGroup
-            .map(consumerGroup => Seq(allowGroup(resourceName = consumerGroup, user, AclOperation.READ, PatternType.LITERAL, host)))
+            .map { consumerGroup =>
+              val patternType = if (application.isConsumerGroupPrefix) PatternType.PREFIXED else PatternType.LITERAL
+              Seq(allowGroup(resourceName = consumerGroup, user, AclOperation.READ, patternType, host))
+            }
             .getOrElse(Seq.empty)
         else
           Seq.empty

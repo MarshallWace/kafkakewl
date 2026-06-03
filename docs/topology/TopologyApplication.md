@@ -20,6 +20,11 @@ By default it's a simple one, without a consumer group and transactional id. The
     topics
 
     By default it's null, meaning it won't get and kafka ACL for transactional ids. Like above, if specified, it must be part of the topology `namespace`, like topic names. At the moment it cannot contain environment variables.
+  - `isConsumerGroupPrefix`: `Boolean?` - whether the `consumerGroup` above should be interpreted as a *prefix* rather than an exact group name. By default it's `false`.
+
+    Set this to `true` for applications that dynamically spin up many short-lived consumer instances, each with its own consumer group whose name starts with a common prefix. The kafka ACL for the consumer group will be emitted as `PatternType.PREFIXED` instead of `LITERAL`, granting `READ` on any group whose name starts with `consumerGroup`.
+
+    Note that such applications are excluded from kafkakewl's consumer-lag tracking and per-application status views, because there is no single real consumer group to monitor - the prefix may match many ephemeral groups and their lags cannot be condensed into one status. For the same reason, kafkakewl cannot reset offsets for such applications; use kafka tools directly against the specific ephemeral consumer groups instead.
 
 - *kafka-streams*
   - `kafkaStreamsAppId`: `String` - the kafka-streams application's id
@@ -104,6 +109,21 @@ A kafka-streams application with the `projectx.my-kafka-streams-app` application
       "user": "service-user-name",
       "type": {
         "kafkaStreamsAppId": "projectx.my-kafka-streams-app"
+      }
+    }
+  }
+}
+```
+
+An application that dynamically starts/stops many consumer instances, each with its own consumer group whose name starts with `projectx.my-dynamic-consumer.` - the kafka ACL grants `READ` on the group prefix `projectx.my-dynamic-consumer.`:
+```json
+{
+  "applications": {
+    "my-dynamic-consumer": {
+      "user": "service-user-name",
+      "type": {
+        "consumerGroup": "projectx.my-dynamic-consumer.",
+        "isConsumerGroupPrefix": true
       }
     }
   }

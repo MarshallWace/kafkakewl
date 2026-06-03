@@ -98,7 +98,7 @@ object TopologyDeployable {
     def makeApplicationTypeDeployable(
       applicationType: Topology.Application.Type
     ): MakeDeployableResult[TopologyToDeploy.Application.Type] = (applicationType match {
-      case t: Topology.Application.Type.Simple => TopologyToDeploy.Application.Type.Simple(t.consumerGroup, t.transactionalId)
+      case t: Topology.Application.Type.Simple => TopologyToDeploy.Application.Type.Simple(t.consumerGroup, t.transactionalId, t.isConsumerGroupPrefix)
       case t: Topology.Application.Type.KafkaStreams => TopologyToDeploy.Application.Type.KafkaStreams(t.kafkaStreamsAppId)
       case t: Topology.Application.Type.Connector => TopologyToDeploy.Application.Type.Connector(t.connector)
       case t: Topology.Application.Type.ConnectReplicator => TopologyToDeploy.Application.Type.ConnectReplicator(t.connectReplicator)

@@ -218,23 +218,23 @@ object JsonEncodeDecode {
   implicit val topologyTopicsDecoder: Decoder[Map[LocalTopicId, Topology.Topic]] = Decoder[Map[String, Topology.Topic]].map(_.toMapByLocalTopicId)
 
   // Topology.Application.Type
-  private final case class TopologyApplicationTypeSimpleForJson(consumerGroup: Option[String] = None, transactionalId: Option[String] = None)
+  private final case class TopologyApplicationTypeSimpleForJson(consumerGroup: Option[String] = None, transactionalId: Option[String] = None, isConsumerGroupPrefix: Boolean = false)
   private final case class TopologyApplicationTypeKafkaStreamsWithAppIdForJson(kafkaStreamsAppId: String)
   private final case class TopologyApplicationTypeConnectorForJson(connector: String)
   private final case class TopologyApplicationTypeConnectReplicatorForJson(connectReplicator: String)
-  implicit val topologyApplicationTypeEncoder: Encoder[Topology.Application.Type] = Encoder.instance {
-    case t: Topology.Application.Type.Simple => TopologyApplicationTypeSimpleForJson(t.consumerGroup, t.transactionalId).asJson
+  implicit val topologyApplicationTypeEncoder: Encoder[Topology.Application.Type] = Encoder.instance[Topology.Application.Type] {
+    case t: Topology.Application.Type.Simple => TopologyApplicationTypeSimpleForJson(t.consumerGroup, t.transactionalId, t.isConsumerGroupPrefix).asJson
     case t: Topology.Application.Type.KafkaStreams => TopologyApplicationTypeKafkaStreamsWithAppIdForJson(t.kafkaStreamsAppId).asJson
     case t: Topology.Application.Type.Connector => TopologyApplicationTypeConnectorForJson(t.connector).asJson
     case t: Topology.Application.Type.ConnectReplicator => TopologyApplicationTypeConnectReplicatorForJson(t.connectReplicator).asJson
-  }
+  }.mapJson(removeFieldIf("isConsumerGroupPrefix", defaultValue = false))
   implicit val topologyApplicationTypeDecoder: Decoder[Topology.Application.Type] =
     List[Decoder[Topology.Application.Type]](
       Decoder[TopologyApplicationTypeKafkaStreamsWithAppIdForJson].map(_.kafkaStreamsAppId).map(Topology.Application.Type.KafkaStreams).widen,
       Decoder[TopologyApplicationTypeConnectorForJson].map(_.connector).map(Topology.Application.Type.Connector).widen,
       Decoder[TopologyApplicationTypeConnectReplicatorForJson].map(_.connectReplicator).map(Topology.Application.Type.ConnectReplicator).widen,
       // this must come last, because any object (even empty) can de decoded into this
-      Decoder[TopologyApplicationTypeSimpleForJson].map(j => Topology.Application.Type.Simple(j.consumerGroup, j.transactionalId)).widen
+      Decoder[TopologyApplicationTypeSimpleForJson].map(j => Topology.Application.Type.Simple(j.consumerGroup, j.transactionalId, j.isConsumerGroupPrefix)).widen
     ).reduceLeft(_ or _)
 
   // resolved topology and related types
@@ -283,23 +283,23 @@ object JsonEncodeDecode {
   implicit val topologyToDeployApplicationsDecoder: Decoder[Map[LocalApplicationId, TopologyToDeploy.Application]] = Decoder[Map[String, TopologyToDeploy.Application]].map(_.toMapByLocalApplicationId)
 
   // TopologyToDeploy.Application.Type
-  private final case class TopologyToDeployApplicationTypeSimpleForJson(consumerGroup: Option[String] = None, transactionalId: Option[String] = None)
+  private final case class TopologyToDeployApplicationTypeSimpleForJson(consumerGroup: Option[String] = None, transactionalId: Option[String] = None, isConsumerGroupPrefix: Boolean = false)
   private final case class TopologyToDeployApplicationTypeKafkaStreamsWithAppIdForJson(kafkaStreamsAppId: String)
   private final case class TopologyToDeployApplicationTypeConnectorForJson(connector: String)
   private final case class TopologyToDeployApplicationTypeConnectReplicatorForJson(connectReplicator: String)
-  implicit val topologyToDeployApplicationTypeEncoder: Encoder[TopologyToDeploy.Application.Type] = Encoder.instance {
-    case t: TopologyToDeploy.Application.Type.Simple => TopologyToDeployApplicationTypeSimpleForJson(t.consumerGroup, t.transactionalId).asJson
+  implicit val topologyToDeployApplicationTypeEncoder: Encoder[TopologyToDeploy.Application.Type] = Encoder.instance[TopologyToDeploy.Application.Type] {
+    case t: TopologyToDeploy.Application.Type.Simple => TopologyToDeployApplicationTypeSimpleForJson(t.consumerGroup, t.transactionalId, t.isConsumerGroupPrefix).asJson
     case t: TopologyToDeploy.Application.Type.KafkaStreams => TopologyToDeployApplicationTypeKafkaStreamsWithAppIdForJson(t.kafkaStreamsAppId).asJson
     case t: TopologyToDeploy.Application.Type.Connector => TopologyToDeployApplicationTypeConnectorForJson(t.connector).asJson
     case t: TopologyToDeploy.Application.Type.ConnectReplicator => TopologyToDeployApplicationTypeConnectReplicatorForJson(t.connectReplicator).asJson
-  }
+  }.mapJson(removeFieldIf("isConsumerGroupPrefix", defaultValue = false))
   implicit val topologyToDeployApplicationTypeDecoder: Decoder[TopologyToDeploy.Application.Type] =
     List[Decoder[TopologyToDeploy.Application.Type]](
       Decoder[TopologyToDeployApplicationTypeKafkaStreamsWithAppIdForJson].map(_.kafkaStreamsAppId).map(TopologyToDeploy.Application.Type.KafkaStreams).widen,
       Decoder[TopologyToDeployApplicationTypeConnectorForJson].map(_.connector).map(TopologyToDeploy.Application.Type.Connector).widen,
       Decoder[TopologyToDeployApplicationTypeConnectReplicatorForJson].map(_.connectReplicator).map(TopologyToDeploy.Application.Type.ConnectReplicator).widen,
       // this must come last, because any object (even empty) can de decoded into this
-      Decoder[TopologyToDeployApplicationTypeSimpleForJson].map(j => TopologyToDeploy.Application.Type.Simple(j.consumerGroup, j.transactionalId)).widen
+      Decoder[TopologyToDeployApplicationTypeSimpleForJson].map(j => TopologyToDeploy.Application.Type.Simple(j.consumerGroup, j.transactionalId, j.isConsumerGroupPrefix)).widen
     ).reduceLeft(_ or _)
 
   // resolved topology and related types

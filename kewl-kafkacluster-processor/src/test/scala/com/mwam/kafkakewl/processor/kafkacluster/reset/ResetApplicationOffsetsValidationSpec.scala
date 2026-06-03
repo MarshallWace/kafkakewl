@@ -11,7 +11,7 @@ import com.mwam.kafkakewl.common.topology.TopologyToDeployOperations
 import com.mwam.kafkakewl.domain.deploy.DeployedTopology.ResetApplicationOptions
 import com.mwam.kafkakewl.domain.deploy.{TopicPartitionPosition, TopicPartitionPositionOfPartition}
 import com.mwam.kafkakewl.domain.topology.TopologyLike.TopicDefaults
-import com.mwam.kafkakewl.domain.topology.{FlexibleTopologyTopicId, LocalTopicId}
+import com.mwam.kafkakewl.domain.topology.{ApplicationId, FlexibleTopologyTopicId, LocalApplicationId, LocalTopicId, TopologyToDeploy}
 import com.mwam.kafkakewl.domain.{TestTopologiesToDeploy, TestTopologiesToDeployCommon}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -117,5 +117,31 @@ class ResetApplicationOffsetsValidationSpec extends FlatSpec
     val actual = validateTopicPartitionsInTopology(topologyToDeploy, options.expectExistingTopicPartitions(topologyToDeploy.topologyNamespace))
     actual should beInvalid
     actual should containMessage("Topic 'test.topic' partition = -1 is invalid")
+  }
+
+  "validateApplicationConsumerGroupForReset for a simple application with a real consumer group" should "be valid" in {
+    val topologyToDeploy = topologyToDeploySourceSink()
+    val actual = validateApplicationConsumerGroupForReset(topologyToDeploy, ApplicationId("test.sink"))
+    actual should beValid
+  }
+
+  "validateApplicationConsumerGroupForReset for an application without a consumer group" should "be invalid" in {
+    val topologyToDeploy = topologyToDeploySourceSink()
+    val actual = validateApplicationConsumerGroupForReset(topologyToDeploy, ApplicationId("test.source"))
+    actual should beInvalid
+    actual should containMessage("application 'test.source' does not have a consumer group")
+  }
+
+  "validateApplicationConsumerGroupForReset for an application with isConsumerGroupPrefix=true" should "be invalid" in {
+    val baseTopology = topologyToDeploySourceSink()
+    val topologyToDeploy = baseTopology.copy(
+      applications = baseTopology.applications.map {
+        case (id, app) if id.id == "sink" => (id, app.makeSimple(consumerGroup = Some("test.sink."), isConsumerGroupPrefix = true))
+        case other => other
+      }
+    )
+    val actual = validateApplicationConsumerGroupForReset(topologyToDeploy, ApplicationId("test.sink"))
+    actual should beInvalid
+    actual should containMessage("application 'test.sink' has a consumer group prefix")
   }
 }

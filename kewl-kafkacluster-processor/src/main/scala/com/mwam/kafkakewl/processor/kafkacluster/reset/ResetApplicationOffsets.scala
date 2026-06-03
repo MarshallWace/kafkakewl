@@ -28,6 +28,23 @@ trait ResetApplicationOffsetsCommon {
   def isInternalTopic(kafkaStreamsApplicationId: String, topic: String): Boolean =
     topic.startsWith(kafkaStreamsApplicationId + "-") && (topic.endsWith("-changelog") || topic.endsWith("-repartition"))
 
+  def validateApplicationConsumerGroupForReset(
+    topologyToDeploy: TopologyToDeploy,
+    applicationId: ApplicationId
+  ): Result = {
+    val applicationOrNone = topologyToDeploy.fullyQualifiedApplications.get(applicationId)
+    Seq(
+      Validation.Result.validationErrorIf(
+        applicationOrNone.flatMap(_.actualConsumerGroup).isEmpty,
+        s"application '$applicationId' does not have a consumer group"
+      ),
+      Validation.Result.validationErrorIf(
+        applicationOrNone.exists(_.isConsumerGroupPrefix),
+        s"application '$applicationId' has a consumer group prefix, not a single consumer group: cannot reset offsets via kafkakewl - reset the actual ephemeral consumer groups directly with kafka tools"
+      )
+    ).combine()
+  }
+
   def validateTopicPartitionsInTopology(
     topologyToDeploy: TopologyToDeploy,
     topicPartitions: Iterable[(TopicId, Option[Int])]
@@ -141,10 +158,7 @@ trait ResetApplicationOffsets extends ResetApplicationOffsetsCommon {
       _ <- Seq(
         validateApplication(topologyToDeploy, applicationId),
         validateTopicPartitionsInTopology(topologyToDeploy, options.expectExistingTopicPartitions(topologyToDeploy.topologyNamespace)),
-        Validation.Result.validationErrorIf(
-          topologyToDeploy.fullyQualifiedApplications.get(applicationId).flatMap(_.actualConsumerGroup).isEmpty,
-          s"application '$applicationId' does not have a consumer group"
-        )
+        validateApplicationConsumerGroupForReset(topologyToDeploy, applicationId)
       ).combine().toCommandErrors
 
       consumerGroupId = topologyToDeploy.fullyQualifiedApplications(applicationId).actualConsumerGroup.get
