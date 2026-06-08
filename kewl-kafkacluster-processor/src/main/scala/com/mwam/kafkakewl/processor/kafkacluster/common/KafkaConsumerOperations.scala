@@ -12,12 +12,13 @@ import com.mwam.kafkakewl.kafka.utils.KafkaExtensions._
 import com.mwam.kafkakewl.domain.deploy.{OffsetOfTopicPartition, TopicPartitionPosition, TopicPartitionPositionOfTopicPartition}
 import com.mwam.kafkakewl.domain.kafka.KafkaTopic
 import com.mwam.kafkakewl.domain.{CommandError, _}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
 
 import scala.util.Try
 
-trait KafkaConsumerOperations[K, V] {
+trait KafkaConsumerOperations[K, V] extends LazyLogging {
   val consumer: KafkaConsumer[K, V]
 
   def resetConsumerGroupOffsets(topicPartitionOffsets: Iterable[OffsetOfTopicPartition]): ValueOrCommandErrors[Iterable[OffsetOfTopicPartition]] = {
@@ -104,7 +105,7 @@ trait KafkaConsumerOperations[K, V] {
       topicPartitions <- Try(consumer.partitionsOf(topics.toSet)).toRightOrCommandError
       topicPartitionsMap = topicPartitions.groupBy(_.topic).mapValues(_.map(_.partition).max + 1)
       topicsWithNoPartitions = topics.filter(topic => !topicPartitionsMap.contains(topic))
-      _ <- Either.cond(topicsWithNoPartitions.isEmpty, (), CommandError.otherError(s"topics '${topicsWithNoPartitions.map(_.quote).mkString(", ")}' doesn't have any partitions"))
+      _ = if (topicsWithNoPartitions.nonEmpty) logger.warn(s"skipping topics with no partitions: ${topicsWithNoPartitions.map(_.quote).mkString(", ")}")
     } yield topicPartitionsMap
   }
 
