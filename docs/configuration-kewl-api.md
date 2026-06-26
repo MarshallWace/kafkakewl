@@ -89,6 +89,8 @@ For details see the `otherProducerNamespaces` field in the [topics in topologies
 
 `KAFKAKEWL_API_DISALLOWED_APPLICATION_USER_NAME_REGEX`: an optional regex to disallow certain application user names, by default empty (no restriction).
 
+`KAFKAKEWL_API_READONLY_HTTP_USER_NAME_REGEX`: an optional regex to restrict matching users to read-only HTTP access, by default empty (no restriction). When set, any authenticated user whose name matches the regex is rejected with `403 Forbidden` on any request other than `GET`, `HEAD` or `OPTIONS`. This is a coarse gate applied before the routes, independent of (and in addition to) the permission system; each rejection is logged and increments the `kafkakewl_api_authorization_rejected` Prometheus metric.
+
 The kafkakewl super-users can manipulate any topology, permissions, kafke-clusters and deployments. Basically they can do anything.
 
 # Configuring the **com.mwam.kafkakewl.extensions.builtin.SameUserAuthPlugin**
