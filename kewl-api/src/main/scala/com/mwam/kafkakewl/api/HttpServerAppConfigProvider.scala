@@ -84,4 +84,6 @@ trait HttpServerAppConfigProvider extends HttpConfigProvider with ConfigProvider
     disallowedReadOnlyDeveloperNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-readonly-developer-name-regex"),
     disallowedApplicationUserNameRegex = kafkaKewlApiConfig.getStringOrNoneIfEmpty("disallowed-application-user-name-regex")
   )
+
+  val readOnlyHttpUserNameRegex: Option[String] = kafkaKewlApiConfig.getStringOrNoneIfEmpty("readonly-http-user-name-regex")
 }

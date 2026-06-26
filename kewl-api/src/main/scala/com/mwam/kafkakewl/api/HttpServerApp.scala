@@ -20,7 +20,7 @@ import com.mwam.kafkakewl.api.routes._
 import com.mwam.kafkakewl.common.PluginLoader
 import com.mwam.kafkakewl.common.cache._
 import com.mwam.kafkakewl.common.changelog.KafkaChangeLogStore
-import com.mwam.kafkakewl.common.http.{CORSHandler, HttpExtensions}
+import com.mwam.kafkakewl.common.http.{CORSHandler, HttpExtensions, ReadOnlyHttpAuthorizer}
 import com.mwam.kafkakewl.common.metrics.{MetricsServiceClientCaching, MetricsServiceClientHttp, MetricsServiceImpl, MetricsServiceOps}
 import com.mwam.kafkakewl.common.persistence.PersistentStoreFactory
 import com.mwam.kafkakewl.common.validation.{PermissionStoreBuiltin, PermissionValidator}
@@ -88,6 +88,7 @@ object HttpServerApp extends App
   logger.info(s"metrics service:          ${metricsServiceUri.getOrElse("-")}")
   logger.info(s"disallowed dev regex:     ${topologyValidatorConfig.disallowedDeveloperNameRegex.getOrElse("-")}")
   logger.info(s"disallowed app user regex: ${topologyValidatorConfig.disallowedApplicationUserNameRegex.getOrElse("-")}")
+  logger.info(s"readonly http user regex: ${readOnlyHttpUserNameRegex.getOrElse("-")}")
   logger.info(s"http hosting port:        $httpPort")
   if (httpAllowedOrigins.nonEmpty) {
     for (httpAllowedOrigin <- httpAllowedOrigins) {
@@ -105,6 +106,8 @@ object HttpServerApp extends App
   val authDirective = authPlugins
     .getOrElse(authPluginName, sys.error(s"couldn't find authentication plugin '$authPluginName'. Available plugins: ${authPlugins.keys.mkString(", ")}"))
     .createAuthenticationDirective(config)
+
+  private val readOnlyHttpAuthorizer = new ReadOnlyHttpAuthorizer(readOnlyHttpUserNameRegex)
 
   val permissionStoreBuiltinExtensionOrNone = permissionPluginName
     .map { permissionPluginName =>
@@ -151,16 +154,18 @@ object HttpServerApp extends App
 
   private val routes = handleExceptions(HttpExtensions.defaultExceptionHandler(logger)) {
     authDirective { user =>
-      encodeResponseWith(Gzip) {
-        ignoreTrailingSlash {
-          AdminRoute.route(commandProcessorActor)(user) ~
-            TopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
-            KafkaClusterRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
-            DeploymentRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
-            (if (permissionStoreBuiltinExtensionOrNone.isEmpty) PermissionRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) else reject) ~
-            DeployedTopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
-            DeployedTopologyMetricsRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
-            ResolvedDeployedTopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user)
+      readOnlyHttpAuthorizer.authorize(user) {
+        encodeResponseWith(Gzip) {
+          ignoreTrailingSlash {
+            AdminRoute.route(commandProcessorActor)(user) ~
+              TopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
+              KafkaClusterRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
+              DeploymentRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
+              (if (permissionStoreBuiltinExtensionOrNone.isEmpty) PermissionRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) else reject) ~
+              DeployedTopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
+              DeployedTopologyMetricsRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user) ~
+              ResolvedDeployedTopologyRoute.route(commandProcessorActor, stateReadonlyCommandProcessor)(user)
+          }
         }
       }
     } ~ HealthRoute.route(commandProcessorActor) ~ HttpExtensions.testExceptionRoute

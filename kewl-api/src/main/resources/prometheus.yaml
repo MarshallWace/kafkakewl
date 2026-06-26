@@ -7,6 +7,12 @@ rules:
     value: "$2"
     labels:
       type: "$1"
+  - pattern: 'kafkakewl-api<name=com\.mwam\.kafkakewl\.api\.errors\.authorizationrejected\, type=counters><>(.+): (.+)'
+    type: UNTYPED
+    name: "kafkakewl-api-authorization-rejected"
+    value: "$2"
+    labels:
+      type: "$1"
   - pattern: 'kafkakewl-api<name=\"com\.mwam\.kafkakewl\.api\.route\.(.+)\:(.+)\:(.+)\:(.+)\"><>(.+): (.+)'
     type: UNTYPED
     name: "kafkakewl-api-route"
